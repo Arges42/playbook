@@ -5,4 +5,5 @@ setup(
     version="0.1",
     packages=["playbook"],
     package_data={'img': ['*.svg','*.png']},
+    install_requires=["pyqt5"],
 )
