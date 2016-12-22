@@ -3,7 +3,7 @@
 ## Getting Started
 ### Prerequisites
 
-    [python3](https://www.python.org/downloads/)
+[python3](https://www.python.org/downloads/)
 
 ### Installing
 
