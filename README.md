@@ -1,11 +1,18 @@
 # playbook
 
 ## Install
-Install dependencies:
+Requires:
 
-  -PyQt5
+  -python3.5
   
 Mac: 
-  pip install -U py2app
+
+    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+    
+    ~/.profile add export PATH=/usr/local/bin:/usr/local/sbin:$PATH
+    
+    brew install python3
+
+    pip3 install -U py2app
   
-Run python setup.py py2app
+    python3 setup.py py2app
