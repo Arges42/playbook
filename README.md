@@ -1,9 +1,12 @@
 # playbook
 
-## Install
-Requires:
+## Getting Started
+### Prerequisites
+'''
+[python3](https://www.python.org/downloads/)
+'''
+### Installing
 
-  -python3.5
   
 Mac: 
   
