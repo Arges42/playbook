@@ -15,11 +15,11 @@ Download the repository either as a zip or use git:
     cd ~/playbook
     git clone https://github.com/Arges42/playbook.git
   
-Mac and Linux: 
+#### Mac and Linux: 
   
     run ./install to create a globally callable script
     
-Windows:
+#### Windows:
 
 Right now, there is no install script.
 Use the WindowsPowerShell and compile it manually:
