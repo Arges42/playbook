@@ -17,7 +17,7 @@ Download the repository either as a zip or use git:
   
 #### Mac and Linux: 
   
-    run ./install to create a globally callable script
+    run ./install.sh to create a globally callable script
     
 #### Windows:
 
