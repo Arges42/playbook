@@ -16,7 +16,6 @@ else:
     # Change this bit to match where you store your data files:
     SRCDIR = os.path.dirname(os.path.dirname(__file__))
 
-print(SRCDIR)
 from .core import Frame, Dancer
 from .dataManage import XmlFormat
 from .ui import ClickableLabel

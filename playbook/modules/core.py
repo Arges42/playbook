@@ -219,7 +219,7 @@ class Dancer(QGraphicsObject):
     def mouseMoveEvent(self, event):
         # check of mouse moved within the restricted area for the item 
         if self.restrictRect.contains(event.scenePos()):
-            QGraphicsEllipseItem.mouseMoveEvent(self, event)
+            QGraphicsObject.mouseMoveEvent(self, event)
 
     def itemChange(self,change,value):
         
