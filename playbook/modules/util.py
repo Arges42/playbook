@@ -49,6 +49,7 @@ class SlotManager():
         SlotManager.reconnect(mainWindow.printPdfAction.triggered,mainWindow.printToPdf)
         SlotManager.reconnect(mainWindow.drawAction.triggered,mainWindow.frames.toggleDrawing)
         SlotManager.reconnect(mainWindow.eraseAction.triggered,mainWindow.frames.toggleErase)
+        SlotManager.reconnect(mainWindow.toogleGridAction.triggered,mainWindow.frames.toggleGrid)
         SlotManager.reconnect(mainWindow.openSettingsAction.triggered,mainWindow.changeSettings)
 
     @staticmethod

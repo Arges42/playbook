@@ -105,6 +105,10 @@ class FrameViewer(QGraphicsView):
         self.frame.drawing = not self.frame.drawing
     def toggleErase(self):
         self.frame.erase = not self.frame.erase
+    def toggleGrid(self):
+        for frame in self.sceneCollection:
+            frame.grid = not frame.grid
+        self.scene().update()
     ###########SLOT DEFINITIONS###########
 
     def contextMenuEvent(self, event):
@@ -152,6 +156,8 @@ class Frame (QGraphicsScene):
         self.setSceneRect(0,0,self.roomHeight,self.roomWidth)
         self.gridSize = 30
 
+        self.grid = True
+
         self.drawing = False
         self.erase = False
         self.scribbling = False
@@ -166,16 +172,15 @@ class Frame (QGraphicsScene):
         gridHeight = roomRect.height() - (roomRect.height()%self.gridSize)
         left = int((self.roomWidth-gridWidth+2*roomRect.left())*.5)
         top = int((self.roomHeight-gridHeight+2*roomRect.top())*.5 )   
-
         painter.setPen(QPen(QColor("black"), 2, Qt.SolidLine))
-        for x in range(left,int(roomRect.right()),self.gridSize):
-            for y in range(top,int(roomRect.bottom()),self.gridSize):
-                painter.drawPoint(x,y)
+        if self.grid :
+            for x in range(left,int(roomRect.right()),self.gridSize):
+                for y in range(top,int(roomRect.bottom()),self.gridSize):
+                    painter.drawPoint(x,y)
         
         painter.drawRect(roomRect)
 
     def mousePressEvent(self, event):
-        print(event.scenePos())
         if event.button() == Qt.LeftButton and self.drawing:
             self.lastPoint = event.scenePos()
             self.scribbling = True
@@ -255,7 +260,7 @@ class Dancer(QGraphicsObject):
         if ((change == QGraphicsItem.ItemPositionChange) and (self.scene()!=None)):
             newPos = value
 
-            if(QApplication.mouseButtons() == Qt.LeftButton and self.scene() != None):
+            if(QApplication.mouseButtons() == Qt.LeftButton and self.scene() != None and self.scene().grid):
                 gridSize = self.scene().gridSize
                 xV = round(newPos.x()/gridSize)*gridSize;
                 yV = round(newPos.y()/gridSize)*gridSize;

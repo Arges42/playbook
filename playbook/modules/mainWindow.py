@@ -59,15 +59,12 @@ class MainWindow(QMainWindow):
         self.previous.setToolTip("Previous frame")
         self.previous.setIconSize(pixmap.rect().size())
         self.previous.setFixedSize(pixmap.rect().size())
-        #self.previous.clicked.connect(self.frames.previousFrame)
         hLayout.addWidget(self.previous)
 
         self.frameIDBox = QLineEdit()
         self.frameIDBox.setFixedWidth(30)
         self.frameIDBox.setText("0")
         self.frameIDBox.setValidator(QIntValidator(0, 999))
-        #self.frameIDBox.textChanged.connect(lambda x: self.frames.selectFrameById(x))
-        #self.frames.frameIDChanged.connect(lambda x:frameIDBox.setText(str(x)))
         hLayout.addWidget(self.frameIDBox)
 
 
@@ -76,7 +73,6 @@ class MainWindow(QMainWindow):
         self.next.setIconSize(pixmap.rect().size())
         self.next.setFixedSize(pixmap.rect().size())
         self.next.setToolTip("Next frame")
-        #self.next.clicked.connect(self.frames.nextFrame)
         hLayout.addWidget(self.next)
 
         pixmap = QPixmap(os.path.join(IMG_PATH,"newFrame.svg"))
@@ -84,7 +80,6 @@ class MainWindow(QMainWindow):
         self.newScene.setIconSize(pixmap.rect().size())
         self.newScene.setFixedSize(pixmap.rect().size())
         self.newScene.setToolTip("Create new frame")
-        #self.newScene.clicked.connect(self.frames.createFrame)
         hLayout.addWidget(self.newScene)
 
         pixmap = QPixmap(os.path.join(IMG_PATH,"deleteFrame.svg"))
@@ -92,7 +87,6 @@ class MainWindow(QMainWindow):
         self.deleteScene.setIconSize(pixmap.rect().size())
         self.deleteScene.setFixedSize(pixmap.rect().size())
         self.deleteScene.setToolTip("Delete active frame")
-        #self.deleteScene.clicked.connect(self.frames.deleteFrame)
         hLayout.addWidget(self.deleteScene)
 
         frameStatus.setLayout(hLayout)
@@ -109,29 +103,23 @@ class MainWindow(QMainWindow):
 
 
         #Status Bar and Menu
-        self.exitAction = QAction(QIcon(os.path.join(IMG_PATH,'GrowlLogo.png')), '&Exit', self)        
+        self.exitAction = QAction(QIcon(os.path.join(IMG_PATH,'exit.svg')), '&Exit', self)        
         self.exitAction.setShortcut('Ctrl+Q')
         self.exitAction.setStatusTip('Exit application')
-        #self.exitAction.triggered.connect(qApp.quit)
 
         self.saveAction = QAction('&Save',self)
-        #self.saveAction.triggered.connect(self.save)
 
         self.loadAction = QAction('&Load',self)
-        #self.loadAction.triggered.connect(self.load)
 
         self.printPdfAction = QAction('&Print',self)
-        #self.printPdfAction.triggered.connect(self.printToPdf)
 
 
-        self.drawAction = QAction(QIcon(''),'Toogle drawing',self,checkable=True)
-        #self.drawAction.triggered.connect(self.frames.toggleDrawing)
-        self.eraseAction = QAction(QIcon(''),'Toogle eraser',self,checkable=True)
-        #self.eraseAction.triggered.connect(self.frames.toggleErase)
-
+        self.drawAction = QAction(QIcon(os.path.join(IMG_PATH,'pen.svg')),'Toogle drawing',self,checkable=True)
+        self.eraseAction = QAction(QIcon(os.path.join(IMG_PATH,'eraser.svg')),'Toogle eraser',self,checkable=True)
+        self.toogleGridAction = QAction(QIcon(os.path.join(IMG_PATH,'grid.svg')),'Toogle grid',self,checkable=True)
+        self.toogleGridAction.setChecked(True)
         
         self.openSettingsAction = QAction(QIcon(''),'Open settings',self)
-        #self.openSettingsAction.triggered.connect(self.changeSettings)
 
         self.statusBar()
 
@@ -146,6 +134,7 @@ class MainWindow(QMainWindow):
         editMenu = menubar.addMenu('&Edit')
         editMenu.addAction(self.drawAction)
         editMenu.addAction(self.eraseAction)
+        editMenu.addAction(self.toogleGridAction)
 
         settingsMenu = menubar.addMenu('&Settings')
         settingsMenu.addAction(self.openSettingsAction)
@@ -154,6 +143,7 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(self.exitAction)
         self.toolbar.addAction(self.drawAction)
         self.toolbar.addAction(self.eraseAction)
+        self.toolbar.addAction(self.toogleGridAction)
 
         self.show()
 
