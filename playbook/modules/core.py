@@ -120,6 +120,9 @@ class FrameViewer(QGraphicsView):
             menu.addAction(addText)
             menu.exec_(event.globalPos())
 
+    def resizeEvent(self, event):
+        QGraphicsView.resizeEvent(self,event)
+
     #Hier müssen alle Items der scene kopiert werden
     def copyScene(self,scene):
         copiedScene = Frame(self)
@@ -146,6 +149,7 @@ class Frame (QGraphicsScene):
 
         self.roomHeight = 600
         self.roomWidth = 600
+        self.setSceneRect(0,0,self.roomHeight,self.roomWidth)
         self.gridSize = 30
 
         self.drawing = False
@@ -163,7 +167,7 @@ class Frame (QGraphicsScene):
         left = int((self.roomWidth-gridWidth+2*roomRect.left())*.5)
         top = int((self.roomHeight-gridHeight+2*roomRect.top())*.5 )   
 
-        points = []
+        painter.setPen(QPen(QColor("black"), 2, Qt.SolidLine))
         for x in range(left,int(roomRect.right()),self.gridSize):
             for y in range(top,int(roomRect.bottom()),self.gridSize):
                 painter.drawPoint(x,y)
@@ -171,6 +175,7 @@ class Frame (QGraphicsScene):
         painter.drawRect(roomRect)
 
     def mousePressEvent(self, event):
+        print(event.scenePos())
         if event.button() == Qt.LeftButton and self.drawing:
             self.lastPoint = event.scenePos()
             self.scribbling = True
@@ -198,6 +203,8 @@ class Frame (QGraphicsScene):
     def updateSettings(self,settings):
         self.roomWidth = settings.get("roomWidth")
         self.roomHeight = settings.get("roomHeight")
+        self.setSceneRect(0,0,self.roomHeight,self.roomWidth)
+        self.gridSize = settings.get("gridSize")
         self.update()
 
 class Dancer(QGraphicsObject):
