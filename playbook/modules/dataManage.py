@@ -5,7 +5,8 @@ from PyQt5.QtGui import QFont,QIcon, QBrush, QColor, QPen
 from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObject,QDateTime, QLineF
 from PyQt5.QtXml import QDomDocument,QDomElement
 
-from .core import Frame,Dancer
+from .core import FrameViewer,Frame,Dancer
+from .util import Settings,SlotManager
 
 class XmlFormat():
     def __init__(self,doc=None):
@@ -41,6 +42,7 @@ class XmlFormat():
     def sceneToXml(self,scene):
         root = self.doc.createElement("Scene")
 
+
         for item in scene.items():
             if isinstance(item,Dancer):
                 dancer = self.dancerToXml(item)
@@ -54,68 +56,108 @@ class XmlFormat():
 
         return root
 
-    def frameToXml(self,frame):
+    def frameViewerToXml(self,frameViewer):
         root = self.doc.createElement("Frame")
-        root.setAttribute("roomRectX",frame.roomRect.x())
-        root.setAttribute("roomRectY",frame.roomRect.y())
-        root.setAttribute("roomRectW",frame.roomRect.width())
-        root.setAttribute("roomRectH",frame.roomRect.height())
 
-        root.setAttribute("gridSize",frame.gridSize)
-        root.setAttribute("activeFrameID",frame.activeFrameID)
+        root.setAttribute("activeFrameID",frameViewer.activeFrameID)
 
-        for scene in frame.sceneCollection:
+        for scene in frameViewer.sceneCollection:
             root.appendChild(self.sceneToXml(scene))
 
         return root
 
+    def projectToXml(self,mainWindow):
+        root = self.doc.createElement("Project")
+        root.setAttribute("projectName",mainWindow.settings.get("projectName"))
+        root.setAttribute("gridSize",mainWindow.settings.get("gridSize"))
+        root.setAttribute("roomWidth",mainWindow.settings.get("roomWidth"))
+        root.setAttribute("roomHeight",mainWindow.settings.get("roomHeight"))
+        root.setAttribute("dancerWidth",mainWindow.settings.get("dancerWidth"))
 
-    def xmlToFrame(self,activeFrame):
-        domFrame = self.doc.elementsByTagName("Frame").item(0).toElement()
+        root.appendChild(self.frameViewerToXml(mainWindow.frames))
         
-        roomRect = QRectF(float(domFrame.attribute("roomRectX")),float(domFrame.attribute("roomRectY")),float(domFrame.attribute("roomRectW")),float(domFrame.attribute("roomRectH")))
+        return root
+
+    def xmlToProject(self,mainWindow):
+        domProject = self.doc.elementsByTagName("Project").item(0).toElement()
+
+        self.settings = Settings(mainWindow)       
+        self.settings.setValue("projectName",domProject.attribute("projectName"))
+        self.settings.setValue("gridSize", int(domProject.attribute("gridSize")))
+        self.settings.setValue("roomWidth", int(domProject.attribute("roomWidth")))
+        self.settings.setValue("roomHeight", int(domProject.attribute("roomHeight")))
+        self.settings.setValue("dancerWidth", int(domProject.attribute("dancerWidth")))       
+        mainWindow.settings = self.settings
+
+        mainWindow.frames.settings = self.settings
+        mainWindow.frames = self.xmlToFrameViewer(mainWindow.frames,domProject)       
+
+        SlotManager.makeMainWindowConnections(mainWindow)
+
+    def xmlToFrameViewer(self,activeFrameViewer,domProject):
+        domFrame = domProject.elementsByTagName("Frame").item(0).toElement()
+       
         activeFrameID = domFrame.attribute("activeFrameID")
         
-        activeFrame.clear()
-        activeFrame.activeFrameID = int(activeFrameID)
-        activeFrame.roomRect = roomRect
-        
+        activeFrameViewer.clear()
+        activeFrameViewer.activeFrameID = int(activeFrameID)
+        activeFrameViewer.sceneCollection = self.xmlToFrameCollection(activeFrameViewer,domFrame)
+        activeFrameViewer.frame = activeFrameViewer.sceneCollection[activeFrameViewer.activeFrameID]
+        activeFrameViewer.setScene(activeFrameViewer.sceneCollection[activeFrameViewer.activeFrameID])
 
-        domScenes = domFrame.elementsByTagName("Scene")
+        SlotManager.makeFrameViewerConnections(activeFrameViewer)
+        return activeFrameViewer
+
+    def xmlToFrameCollection(self,activeFrameViewer,domFrame):
+        frames = []
+        domScenes = domFrame.elementsByTagName("Scene")  
         for i in range(domScenes.length()):
             domScene = domScenes.item(i)
             domScene = domScene.toElement()
-            scene = QGraphicsScene(activeFrame)
-            domDancers = domScene.elementsByTagName("Dancer")
-            for j in range(domDancers.length()):
-                domDancer = domDancers.item(j)
-                domDancer = domDancer.toElement()
-                dancer = Dancer(roomRect,copy=True)
-                dancer.dancerID = domDancer.attribute("dancerID")
-                dancer.name = domDancer.attribute("name")
-                dancer.alias = domDancer.attribute("alias")
-                dancer.color = QColor(domDancer.attribute("color"))
-                dancer.boundaryColor = QColor(domDancer.attribute("boundaryColor"))
-                dancer.setPos(float(domDancer.attribute("posX")),float(domDancer.attribute("posY")))
+            scene = Frame(activeFrameViewer)
+            dancers = self.xmlToDancerCollection(domScene)
+            for dancer in dancers:
+                SlotManager.FrameViewerToDancerConnection(activeFrameViewer,dancer)
                 scene.addItem(dancer)
+            self.xmlToLineCollection(domScene,scene)
+            self.xmlToTextCollection(domScene,scene)
+            SlotManager.FrameViewerToFrameConnection(activeFrameViewer,scene)
+            frames.append(scene)
 
-            domLines = domScene.elementsByTagName("Line")
-            for j in range(domLines.length()):
-                domLine = domLines.item(j)
-                domLine = domLine.toElement()
-                line = QLineF(float(domLine.attribute("x1")),float(domLine.attribute("y1")),float(domLine.attribute("x2")),float(domLine.attribute("y2")))
-                scene.addItem(QGraphicsLineItem(line))
+        return frames
 
-            domTexts = domScene.elementsByTagName("Text")
-            for j in range(domTexts.length()):
-                domText = domTexts.item(j)
-                domText = domText.toElement()
-                text = TextBox(domText.attribute("content"))
-                text.setRotation(float(domText.attribute("rotation")))
-                text.setPos(float(domText.attribute("x")),float(domText.attribute("y")))
-                scene.addItem(text)
+    def xmlToDancerCollection(self,domScene):
+        dancers = []
+        domDancers = domScene.elementsByTagName("Dancer")
+        for j in range(domDancers.length()):
+            domDancer = domDancers.item(j)
+            domDancer = domDancer.toElement()
+            dancer = Dancer(copy=True)
+            dancer.dancerID = domDancer.attribute("dancerID")
+            dancer.name = domDancer.attribute("name")
+            dancer.alias = domDancer.attribute("alias")
+            dancer.color = QColor(domDancer.attribute("color"))
+            dancer.boundaryColor = QColor(domDancer.attribute("boundaryColor"))
+            dancer.setPos(float(domDancer.attribute("posX")),float(domDancer.attribute("posY")))
+            dancers.append(dancer)
+        return dancers
+    
+    def xmlToLineCollection(self,domScene,frame):
+        domLines = domScene.elementsByTagName("Line")
+        for j in range(domLines.length()):
+            domLine = domLines.item(j)
+            domLine = domLine.toElement()
+            line = QLineF(float(domLine.attribute("x1")),float(domLine.attribute("y1")),float(domLine.attribute("x2")),float(domLine.attribute("y2")))
+            frame.addItem(QGraphicsLineItem(line))
+    
+    def xmlToTextCollection(self,domScene,frame):
+        domTexts = domScene.elementsByTagName("Text")
+        for j in range(domTexts.length()):
+            domText = domTexts.item(j)
+            domText = domText.toElement()
+            text = TextBox(domText.attribute("content"))
+            text.setRotation(float(domText.attribute("rotation")))
+            text.setPos(float(domText.attribute("x")),float(domText.attribute("y")))
+            frame.addItem(text)
 
-            activeFrame.sceneCollection.append(scene)
-        activeFrame.scene = activeFrame.sceneCollection[activeFrame.activeFrameID]
-        activeFrame.setScene(activeFrame.sceneCollection[activeFrame.activeFrameID])
-        activeFrame.setSceneRect(activeFrame.roomRect)
+    

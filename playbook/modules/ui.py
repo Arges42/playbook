@@ -1,9 +1,11 @@
 import sys
 from PyQt5.QtWidgets import (QWidget, QToolTip, 
-    QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QColorDialog, QDialogButtonBox, QLineEdit, QLabel,
+    QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QColorDialog, QDialogButtonBox, QLineEdit, QLabel, QSpinBox,
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsItem, QMenu, QGraphicsObject, QDialog)
 from PyQt5.QtGui import QFont,QIcon, QBrush, QColor, QPen, QPixmap
 from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObject,QDateTime, QSize
+
+from .util import Settings
 
 class QColorButton(QPushButton):
     '''
@@ -91,6 +93,64 @@ class DancerDialog(QDialog):
         bColor = dialog.bColor.color()
         return {"name":name, "alias":alias, "color":color, "bColor": bColor, "accept": result == QDialog.Accepted}
 
+class SettingsDialog(QDialog):
+    def __init__(self, parent = None, currentSettings = None):
+        super(SettingsDialog, self).__init__(parent)
+
+        layout = QFormLayout(self)
+
+        self.projectName = QLineEdit("",self)
+
+        self.roomWidth = QSpinBox(self)
+        self.roomWidth.setMinimum(1)
+        self.roomWidth.setMaximum(2000)
+
+        self.roomHeight = QSpinBox(self)
+        self.roomHeight.setMinimum(1)
+        self.roomHeight.setMaximum(2000)
+
+        self.gridSize = QSpinBox(self)
+        self.gridSize.setMinimum(1)
+
+        self.dancerWidth = QSpinBox(self)
+        self.dancerWidth.setMinimum(1)
+
+        layout.addRow("Project name",self.projectName)
+        layout.addRow("Room width",self.roomWidth)
+        layout.addRow("Room height",self.roomHeight)
+        layout.addRow("Grid size",self.gridSize)
+        layout.addRow("Dancer size",self.dancerWidth)
+
+        # OK and Cancel buttons
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel,
+            Qt.Horizontal, self)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+        if currentSettings:
+            self.setDefaults(currentSettings)
+
+    def setDefaults(self,settings):
+        self.projectName.setText(settings.get("projectName",""))
+        self.roomHeight.setValue(settings.get("roomHeight",600))
+        self.roomWidth.setValue(settings.get("roomWidth",600))
+        self.gridSize.setValue(settings.get("gridSize",20))
+        self.dancerWidth.setValue(settings.get("dancerWidth",30))
+
+    @staticmethod
+    def getModification(parent = None,currentSettings=None):
+        dialog = SettingsDialog(parent,currentSettings)
+        result = dialog.exec_()
+
+        projectName = dialog.projectName.text()
+        roomWidth = dialog.roomWidth.value()
+        roomHeight = dialog.roomHeight.value()
+        gridSize = dialog.gridSize.value()
+        dancerWidth = dialog.dancerWidth.value()
+
+        return {"projectName" : projectName,"roomHeight" : roomHeight, "roomWidth" : roomWidth, "gridSize" : gridSize, "dancerWidth" : dancerWidth, "accept": result == QDialog.Accepted}
 
 class ClickableLabel(QLabel):
     clicked = pyqtSignal()
