@@ -1,4 +1,5 @@
 import sys
+from functools import wraps
 from PyQt5.QtWidgets import (QWidget, QToolTip, 
     QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QColorDialog, QDialogButtonBox, QLineEdit, QGraphicsLineItem, QGraphicsTextItem,
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsItem, QMenu, QGraphicsObject, QDialog)
@@ -9,9 +10,19 @@ from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObje
 from .ui import DancerDialog
 from .util import SlotManager
 
+def changeWrapper(fn):
+    @wraps(fn)
+    def emitter(self,*args,**kwargs):
+        result = fn(self,*args,**kwargs)
+        self.contentChanged.emit()
+        return result
+    return emitter
+
+
 class FrameViewer(QGraphicsView):
 
-    frameIDChanged = pyqtSignal(int)    
+    frameIDChanged = pyqtSignal(int)
+    contentChanged = pyqtSignal()    
 
     def __init__(self,parent,settings=None,new=True):
         super().__init__(parent)    
@@ -32,6 +43,7 @@ class FrameViewer(QGraphicsView):
         #SlotManager.makeFrameViewerConnections(self)
 
     ###########SLOT DEFINITIONS###########
+    @changeWrapper
     def createDancer(self,pos):
         newDancer = Dancer()
         newDancer.setPos(self.mapToScene(pos))
@@ -40,16 +52,19 @@ class FrameViewer(QGraphicsView):
         SlotManager.FrameViewerToDancerConnection(self,newDancer)
         self.scene().addItem(newDancer)
 
+    @changeWrapper
     def deleteDancer(self,dancerID=0):
         for item in self.scene().items():
             if(item.dancerID==dancerID):
                 self.scene().removeItem(item)
 
+    @changeWrapper
     def addText(self,pos):
         text = TextBox("Text")
         text.setPos(self.mapToScene(pos))
         self.scene().addItem(text)
 
+    @changeWrapper
     def createFrame(self):
         self.frame = self.copyScene(self.sceneCollection[self.activeFrameID])
         #self.settings.settingsChanged.connect(lambda x:self.frame.updateSettings(x))
@@ -60,6 +75,7 @@ class FrameViewer(QGraphicsView):
         self.activeFrameID+=1
         self.frameIDChanged.emit(self.activeFrameID)
 
+    @changeWrapper
     def deleteFrame(self):
         if len(self.sceneCollection) == 1:
             self.scene().clear()
@@ -127,6 +143,7 @@ class FrameViewer(QGraphicsView):
     def resizeEvent(self, event):
         QGraphicsView.resizeEvent(self,event)
 
+    
     #Hier müssen alle Items der scene kopiert werden
     def copyScene(self,scene):
         copiedScene = Frame(self)
@@ -148,6 +165,8 @@ class FrameViewer(QGraphicsView):
 
 
 class Frame (QGraphicsScene):
+    
+    contentChanged = pyqtSignal()
     def __init__(self,parent):
         super().__init__(parent)
 
@@ -217,6 +236,7 @@ class Dancer(QGraphicsObject):
     globalID = 0
     # define signals
     deleteRequested = pyqtSignal(int)
+    contentChanged = pyqtSignal()
 
     def __init__(self, parent=None,copy=False):
         super().__init__()
@@ -273,6 +293,7 @@ class Dancer(QGraphicsObject):
         else:
             return QGraphicsItem.itemChange(self,change, value)
 
+    @changeWrapper
     def modifyDancer(self):
         changes = DancerDialog.getModification(dancer=self)
         if changes["accept"]:
@@ -309,6 +330,8 @@ class Dancer(QGraphicsObject):
 
 
 class TextBox(QGraphicsTextItem):
+    contentChanged = pyqtSignal()
+
     def __init__(self,content,parent=None):
         super().__init__(content,parent)
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
@@ -326,3 +349,11 @@ class TextBox(QGraphicsTextItem):
     def mouseReleaseEvent(self, event):
         self.ungrabMouse()
         QGraphicsItem.mouseReleaseEvent(self,event)
+
+    @changeWrapper
+    def mouseMoveEvent(self,event):
+        QGraphicsItem.mouseMoveEvent(self,event)
+        self.scene().update()
+
+
+

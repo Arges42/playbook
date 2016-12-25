@@ -1,12 +1,12 @@
 import sys,os
 from PyQt5.QtWidgets import (QWidget, QToolTip, 
-    QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QHBoxLayout, QColorDialog, QDialogButtonBox, QLineEdit,
+    QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QHBoxLayout, QColorDialog, QDialogButtonBox, QLineEdit, 
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsItem, QMenu, QGraphicsObject, QDialog, QFileDialog)
 from PyQt5.QtGui import QFont,QIcon, QBrush, QColor, QPen, QPainter, QPixmap,QIntValidator
-from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObject,QDateTime, QFile, QSize
+from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObject,QDateTime, QFile, QSize, QStandardPaths
 
 from PyQt5.QtXml import QDomDocument
-from PyQt5.QtPrintSupport import QPrinter
+from PyQt5.QtPrintSupport import QPrinter, QPrintDialog
 
 if getattr(sys, 'frozen', False):
     # The application is frozen
@@ -32,9 +32,12 @@ class MainWindow(QMainWindow):
         
         self.settings = Settings(self)
         self.frames = FrameViewer(self,self.settings)
-        self.projectName = ""
+        self.projectName = "unnamed"
+        self.unsavedChanges = False
         self.initUI()
         SlotManager.makeMainWindowConnections(self)
+
+        self.setWindowTitle("playbook - {}".format(self.projectName))
         
     def initUI(self):
         
@@ -144,6 +147,7 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(self.drawAction)
         self.toolbar.addAction(self.eraseAction)
         self.toolbar.addAction(self.toogleGridAction)
+        self.toolbar.addAction(self.scaleView)
 
         self.show()
 
@@ -156,22 +160,27 @@ class MainWindow(QMainWindow):
 
     def save(self):
         name = QFileDialog.getSaveFileName(self, 'Save File')[0]
-        doc = QDomDocument()
-        formatter = XmlFormat(doc)
-        doc.appendChild(formatter.projectToXml(self))       
-        saveFile = open(name,'w')
-        saveFile.write(doc.toString())
-        saveFile.close()
+        if name:
+            doc = QDomDocument()
+            formatter = XmlFormat(doc)
+            doc.appendChild(formatter.projectToXml(self))       
+            saveFile = open(name,'w')
+            saveFile.write(doc.toString())
+            saveFile.close()
+            self.unsavedChanges = False
+            self.setWindowTitle("playbook - {}".format(self.projectName))
 
     def load(self):
         name = QFileDialog.getOpenFileName(self, 'Load File')[0]
-        doc = QDomDocument(name)
-        openFile = QFile(name)
-        doc.setContent(openFile)
-        formatter = XmlFormat(doc)
-        formatter.xmlToProject(self)
-        openFile.close() 
-        self.centralWidget().update()
+        if name:
+            doc = QDomDocument(name)
+            openFile = QFile(name)
+            doc.setContent(openFile)
+            formatter = XmlFormat(doc)
+            formatter.xmlToProject(self)
+            openFile.close() 
+            self.centralWidget().update()
+            self.setWindowTitle("playbook - {}".format(self.projectName))
 
 
     def printToPdf(self):
@@ -179,19 +188,29 @@ class MainWindow(QMainWindow):
         pdf_printer.setOutputFormat(QPrinter.PdfFormat)
         pdf_printer.setPaperSize(self.frames.sceneRect().size(), QPrinter.Point)
         pdf_printer.setFullPage(True)
-        pdf_printer.setOutputFileName("tmp.pdf")
+        
+        pdf_printer.setOutputFileName(os.path.join(QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation),self.projectName+".pdf"))
+        pdf_printer.setResolution(144)
         pdf_printer.newPage()
-        pdf_painter = QPainter()
-        pdf_painter.begin(pdf_printer)
-        for i,scene in enumerate(self.frames.sceneCollection):
-            self.frames.setScene(scene)
-            viewport = self.frames.viewport().rect()
-            self.frames.render(pdf_painter, QRectF(pdf_printer.width()*0.25, pdf_printer.height()*0.1,
-                   pdf_printer.width(), pdf_printer.height()/2. ),
-            self.frames.mapFromScene(self.frames.roomRect).boundingRect())
-            if i<len(self.frames.sceneCollection)-1:
-                pdf_printer.newPage()
-        pdf_painter.end()
+        printDialog = QPrintDialog(pdf_printer, self)
+        if(printDialog.exec_() == QDialog.Accepted):
+            pdf_painter = QPainter()
+            pdf_painter.begin(pdf_printer)
+            for i,scene in enumerate(self.frames.sceneCollection):
+                #self.frames.setScene(scene)
+                #viewport = self.frames.viewport().rect()
+                #self.frames.render(pdf_painter, QRectF(pdf_printer.width()*0.25, pdf_printer.height()*0.1,
+                #       pdf_printer.width(), pdf_printer.height()/2. ),
+                #(self.frames.mapFromScene(QRectF(viewport)).boundingRect()))
+                scene.render(pdf_painter)
+                if i<len(self.frames.sceneCollection)-1:
+                    pdf_printer.newPage()
+            pdf_painter.end()
+
+
+    def contentChanged(self):
+        self.unsavedChanges = True
+        self.setWindowTitle("playbook - {}{}".format("*",self.projectName))
 
     def changeSettings(self):
 
@@ -201,3 +220,5 @@ class MainWindow(QMainWindow):
 
     def updateSettings(self, settings):
         self.projectName = settings.get("projectName")
+        self.contentChanged()
+        

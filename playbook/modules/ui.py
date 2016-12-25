@@ -97,6 +97,7 @@ class SettingsDialog(QDialog):
     def __init__(self, parent = None, currentSettings = None):
         super(SettingsDialog, self).__init__(parent)
 
+        self.setWindowTitle("Settings")
         layout = QFormLayout(self)
 
         self.projectName = QLineEdit("",self)
@@ -133,7 +134,7 @@ class SettingsDialog(QDialog):
             self.setDefaults(currentSettings)
 
     def setDefaults(self,settings):
-        self.projectName.setText(settings.get("projectName",""))
+        self.projectName.setText(settings.get("projectName","unnamed"))
         self.roomHeight.setValue(settings.get("roomHeight",600))
         self.roomWidth.setValue(settings.get("roomWidth",600))
         self.gridSize.setValue(settings.get("gridSize",20))

@@ -11,7 +11,7 @@ class Settings(QObject):
             self.defaultSettings()
     
     def defaultSettings(self):
-        self.settings["projectName"] = ""
+        self.settings["projectName"] = "unnamed"
         self.settings["gridSize"] = 20
         self.settings["dancerWidth"] = 30
         self.settings["roomHeight"] = 600
@@ -26,9 +26,18 @@ class Settings(QObject):
     def get(self,key,default=None):
         return self.settings.get(key,default)
 
+    def compareSettings(self,x,y):
+        equal = True
+        for key,item in x.items():
+            if item!=y.get(key,None):
+                equal = False
+                break
+        return equal
+            
     def updateSettings(self,newSettings):
-        self.settings = {**self.settings, **newSettings}
-        self.settingsChanged.emit(self.settings)
+        if not self.compareSettings(self.settings,newSettings):
+            self.settings = {**self.settings, **newSettings}
+            self.settingsChanged.emit(self.settings)
 
 class SlotManager():
     def __init__(self):
@@ -51,6 +60,7 @@ class SlotManager():
         SlotManager.reconnect(mainWindow.eraseAction.triggered,mainWindow.frames.toggleErase)
         SlotManager.reconnect(mainWindow.toogleGridAction.triggered,mainWindow.frames.toggleGrid)
         SlotManager.reconnect(mainWindow.openSettingsAction.triggered,mainWindow.changeSettings)
+        mainWindow.frames.contentChanged.connect(mainWindow.contentChanged)
 
     @staticmethod
     def makeFrameViewerConnections(frameViewer):
@@ -60,10 +70,12 @@ class SlotManager():
     def FrameViewerToDancerConnection(frameViewer,dancer):
         SlotManager.reconnect(dancer.deleteRequested,lambda x:frameViewer.deleteDancer(x))
         frameViewer.mainWindow.settings.settingsChanged.connect(lambda x:dancer.updateSettings(x))
+        dancer.contentChanged.connect(frameViewer.mainWindow.contentChanged)
 
     @staticmethod
     def FrameViewerToFrameConnection(frameViewer,frame):
         frameViewer.mainWindow.settings.settingsChanged.connect(lambda x:frame.updateSettings(x))
+        frame.contentChanged.connect(frameViewer.mainWindow.contentChanged)
 
     @staticmethod
     def reconnect(signal, newhandler=None, oldhandler=None):
