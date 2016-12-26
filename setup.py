@@ -1,5 +1,4 @@
 import sys
-#from setuptools import setup
 from cx_Freeze import setup, Executable
 
 base = None
@@ -25,7 +24,7 @@ EXECUTABLES = [
 
 setup(
     name="playbook",
-    version="0.1",
+    version="0.2",
     options = OPTIONS,
     executables = EXECUTABLES,
 

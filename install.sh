@@ -31,13 +31,20 @@ if(($? != 0)); then
     fi
 fi
 
+echo "Installing requirements..."
 pip install -r requirements.txt
 
+echo "Starting installation..."
 python setup.py build
 
+echo "Creating global link..."
 MAIN_FILE="$(python -c 'import os,glob; bin = os.path.abspath(glob.glob("./build/exe.*/main")[0]); print(bin);')"
 touch playbook.sh
 echo '#!/bin/sh' >> playbook.sh
 echo $MAIN_FILE >> playbook.sh
 chmod +x playbook.sh
+echo "Enter password to allow global access:"
 sudo sh -c "mv playbook.sh /usr/local/bin/playbook"
+echo "Installation finished."
+echo "Start by tiping 'playbook' into the terminal."
+echo "Happy choreo building :)"
