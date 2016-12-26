@@ -164,3 +164,22 @@ class ClickableLabel(QLabel):
     def mousePressEvent(self, event):
         self.clicked.emit()
 
+class OverviewLabel(QLabel):
+    clicked = pyqtSignal(QWidget)
+
+    def __init__(self,parent=None):
+        super(OverviewLabel, self).__init__(parent)
+        self.setMaximumSize(130,130)
+        self.setMinimumSize(130,130)
+        self.active = False
+
+    def mousePressEvent(self, event):
+        self.clicked.emit(self)
+
+    def toggleActive(self):
+        self.active = not self.active
+        if self.active:
+            self.setStyleSheet("border: 1px solid blue")
+        else :
+            self.setStyleSheet("border: 1px solid black")
+

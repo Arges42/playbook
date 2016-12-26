@@ -5,7 +5,7 @@ from PyQt5.QtGui import QFont,QIcon, QBrush, QColor, QPen
 from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObject,QDateTime, QLineF
 from PyQt5.QtXml import QDomDocument,QDomElement
 
-from .core import FrameViewer,Frame,Dancer
+from .core import FrameViewer,Frame,Dancer, TextBox
 from .util import Settings,SlotManager
 
 class XmlFormat():

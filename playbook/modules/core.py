@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (QWidget, QToolTip,
     QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QColorDialog, QDialogButtonBox, QLineEdit, QGraphicsLineItem, QGraphicsTextItem,
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsItem, QMenu, QGraphicsObject, QDialog)
 from PyQt5.QtGui import QFont,QIcon, QBrush, QColor, QPen
-from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObject,QDateTime, QLineF, QSizeF, QRect
+from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObject,QDateTime, QLineF, QSizeF,QSize, QRect
 
 
 from .ui import DancerDialog
@@ -12,8 +12,12 @@ from .util import SlotManager
 
 def changeWrapper(fn):
     @wraps(fn)
-    def emitter(self,*args,**kwargs):
-        result = fn(self,*args,**kwargs)
+    def emitter(*args,**kwargs):
+        if(args[1] == False):
+            result = fn(args[0],**kwargs)
+        else:
+            result = fn(*args,**kwargs)
+        self = args[0]
         self.contentChanged.emit()
         return result
     return emitter
@@ -22,12 +26,16 @@ def changeWrapper(fn):
 class FrameViewer(QGraphicsView):
 
     frameIDChanged = pyqtSignal(int)
-    contentChanged = pyqtSignal()    
+    contentChanged = pyqtSignal()
+    resized = pyqtSignal(QSize)
+    frameCreated = pyqtSignal(int) 
+    frameDeleted = pyqtSignal(int)   
 
     def __init__(self,parent,settings=None,new=True):
         super().__init__(parent)    
 
         self.mainWindow = parent
+        self.activeFrameID = 0
 
         #Collection for all scenes
         self.sceneCollection = []
@@ -39,7 +47,7 @@ class FrameViewer(QGraphicsView):
             #self.settings.settingsChanged.connect(lambda x:self.frame.updateSettings(x))
             self.setScene(self.frame)
             self.sceneCollection.append(self.scene())
-        self.activeFrameID = 0
+        
         #SlotManager.makeFrameViewerConnections(self)
 
     ###########SLOT DEFINITIONS###########
@@ -71,9 +79,10 @@ class FrameViewer(QGraphicsView):
         SlotManager.FrameViewerToFrameConnection(self,self.frame)
         self.setScene(self.frame)
         self.setSceneRect(self.mapToScene(self.viewport().rect()).boundingRect())
-        self.sceneCollection.append(self.frame)
+        self.sceneCollection.insert(self.activeFrameID,self.frame)
         self.activeFrameID+=1
         self.frameIDChanged.emit(self.activeFrameID)
+        self.frameCreated.emit(self.activeFrameID)
 
     @changeWrapper
     def deleteFrame(self):
@@ -89,6 +98,7 @@ class FrameViewer(QGraphicsView):
             del self.sceneCollection[self.activeFrameID]
             self.activeFrameID -= 1
             self.frameIDChanged.emit(self.activeFrameID)
+            self.frameDeleted.emit(self.activeFrameID)
 
   
     def nextFrame(self):
@@ -110,12 +120,17 @@ class FrameViewer(QGraphicsView):
         self.frameIDChanged.emit(self.activeFrameID)
 
     def selectFrameById(self,i):
-        if i.isdigit():            
-            i = int(i)
+        if isinstance(i,str):
+            try:            
+                i = int(i)
+            except ValueError:
+                return
+        if isinstance(i,int):
             if(i<len(self.sceneCollection)):
                 self.activeFrameID = i
                 self.frame = self.sceneCollection[self.activeFrameID]
                 self.setScene(self.frame)
+            self.frameIDChanged.emit(self.activeFrameID)
 
     def toggleDrawing(self):
         self.frame.drawing = not self.frame.drawing
@@ -141,6 +156,7 @@ class FrameViewer(QGraphicsView):
             menu.exec_(event.globalPos())
 
     def resizeEvent(self, event):
+        self.resized.emit(event.size()) 
         QGraphicsView.resizeEvent(self,event)
 
     
@@ -355,5 +371,13 @@ class TextBox(QGraphicsTextItem):
         QGraphicsItem.mouseMoveEvent(self,event)
         self.scene().update()
 
+class SingleFrameViewer(QGraphicsView):
+    def __init__(self,parent,sourceFrameViewer = None):
+        super().__init__(parent)    
+        
+        self.sourceFrameViewer = sourceFrameViewer
 
+    #Overwrite the default drawBackground to avoid calling drawBackground of the frame
+    def drawBackground(self,painter,rect):
+        pass
 

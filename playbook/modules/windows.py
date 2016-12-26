@@ -1,6 +1,6 @@
 import sys,os
 from PyQt5.QtWidgets import (QWidget, QToolTip, 
-    QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QHBoxLayout, QColorDialog, QDialogButtonBox, QLineEdit, 
+    QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QHBoxLayout,QVBoxLayout, QColorDialog, QDialogButtonBox, QLineEdit, QDockWidget,QScrollArea,QLabel,QScrollBar,
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsItem, QMenu, QGraphicsObject, QDialog, QFileDialog)
 from PyQt5.QtGui import QFont,QIcon, QBrush, QColor, QPen, QPainter, QPixmap,QIntValidator
 from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObject,QDateTime, QFile, QSize, QStandardPaths
@@ -16,9 +16,9 @@ else:
     # Change this bit to match where you store your data files:
     SRCDIR = os.path.dirname(os.path.dirname(__file__))
 
-from .core import FrameViewer, Dancer
+from .core import FrameViewer, SingleFrameViewer, Dancer
 from .dataManage import XmlFormat
-from .ui import ClickableLabel,SettingsDialog
+from .ui import ClickableLabel,SettingsDialog,OverviewLabel
 from .util import Settings,SlotManager
 
 
@@ -37,7 +37,7 @@ class MainWindow(QMainWindow):
         self.initUI()
         SlotManager.makeMainWindowConnections(self)
 
-        self.setWindowTitle("playbook - {}".format(self.projectName))
+        self.setWindowTitle("Playbook - {}".format(self.projectName))
         
     def initUI(self):
         
@@ -101,9 +101,18 @@ class MainWindow(QMainWindow):
         #Main window position and icon
         self.resize(600, 600)
         self.center()
-        self.setWindowTitle('Playbook')
         self.setWindowIcon(QIcon(os.path.join(IMG_PATH,'GrowlLogo.png'))) 
 
+        
+        #Dock widgets
+        dock = QDockWidget("Overview", self)
+        dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+        self.overview = Overview(dock)
+        dock.setWidget(self.overview)
+        dock.setMinimumSize(150,0)
+        self.addDockWidget(Qt.RightDockWidgetArea, dock)
+        self.frames.frameCreated.connect(lambda x: self.overview.addWidget(x))
+        self.frames.frameIDChanged.connect(lambda x: self.overview.activeFrameChanged(x))
 
         #Status Bar and Menu
         self.exitAction = QAction(QIcon(os.path.join(IMG_PATH,'exit.svg')), '&Exit', self)        
@@ -147,7 +156,6 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(self.drawAction)
         self.toolbar.addAction(self.eraseAction)
         self.toolbar.addAction(self.toogleGridAction)
-        self.toolbar.addAction(self.scaleView)
 
         self.show()
 
@@ -181,7 +189,7 @@ class MainWindow(QMainWindow):
             openFile.close() 
             self.centralWidget().update()
             self.setWindowTitle("playbook - {}".format(self.projectName))
-
+            self.overview.addWidget()
 
     def printToPdf(self):
         pdf_printer = QPrinter()
@@ -210,7 +218,7 @@ class MainWindow(QMainWindow):
 
     def contentChanged(self):
         self.unsavedChanges = True
-        self.setWindowTitle("playbook - {}{}".format("*",self.projectName))
+        self.setWindowTitle("Playbook - {}{}".format("*",self.projectName))
 
     def changeSettings(self):
 
@@ -221,4 +229,57 @@ class MainWindow(QMainWindow):
     def updateSettings(self, settings):
         self.projectName = settings.get("projectName")
         self.contentChanged()
+
+
+
+class Overview(QWidget):
+    def __init__(self,parent=None):
+        super().__init__(parent)
+        self.initUI()
+
+    def initUI(self):
+        self.scrollArea = QScrollArea(self)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget(self.scrollArea)
+        self.vLayout = QVBoxLayout(self.scrollAreaWidgetContents)
+        self.vLayout.setSpacing(20)
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+        self.scrollArea.setMinimumSize(150,self.parent().parent().frames.size().height())
+        self.addWidget()
+
+        self.parent().parent().frames.resized.connect(lambda x:self.adaptFrameViewerSize(x))
+
+        
+
+    def addWidget(self,frameID = 0):
+        for i in reversed(range(self.vLayout.count())): 
+            widget = self.vLayout.takeAt(i).widget()
+            if widget is not None:
+                widget = widget.setParent(None)
+
+        for i,frame in enumerate(self.parent().parent().frames.sceneCollection):
+            label = OverviewLabel(self)
+            view = SingleFrameViewer(label,self.parent().parent().frames)
+            view.setScene(frame)
+            view.scale(0.2,0.2)
+            view.resize(130,130)
+            label.clicked.connect(lambda x: self.labelClicked(x))
+            self.vLayout.insertWidget(i,label)
+        self.activeFrameChanged(self.parent().parent().frames.activeFrameID)
+    
+    def activeFrameChanged(self,activeFrameID):
+        for i in reversed(range(self.vLayout.count())):
+            widget = self.vLayout.itemAt(i).widget()
+            if widget is not None:
+                if widget.active:
+                    widget.toggleActive() 
+        activeFrame = self.vLayout.itemAt(activeFrameID)
+        if activeFrame is not None:
+            activeFrame.widget().toggleActive()    
+
+    def labelClicked(self,widget):
+        self.parent().parent().frames.selectFrameById(self.vLayout.indexOf(widget))
+
+    def adaptFrameViewerSize(self,size):
+        self.scrollArea.setMinimumSize(self.scrollArea.minimumSize().width(),size.height()-7)
         

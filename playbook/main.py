@@ -3,7 +3,7 @@
 
 import sys,os
 from PyQt5.QtWidgets import QApplication
-from modules.mainWindow import MainWindow
+from modules.windows import MainWindow
 
 
 #if __name__ == '__main__':

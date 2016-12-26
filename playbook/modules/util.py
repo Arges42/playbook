@@ -48,7 +48,7 @@ class SlotManager():
         mainWindow.settings.settingsChanged.connect(lambda x: mainWindow.updateSettings(x))
         SlotManager.reconnect(mainWindow.previous.clicked,mainWindow.frames.previousFrame)
         SlotManager.reconnect(mainWindow.frameIDBox.textChanged,lambda x: mainWindow.frames.selectFrameById(x))
-        SlotManager.reconnect(mainWindow.frames.frameIDChanged,lambda x:mainWindow.frameIDBox.setText(str(x)))
+        mainWindow.frames.frameIDChanged.connect(lambda x:mainWindow.frameIDBox.setText(str(x)))
         SlotManager.reconnect(mainWindow.next.clicked,mainWindow.frames.nextFrame)
         SlotManager.reconnect(mainWindow.newScene.clicked,mainWindow.frames.createFrame)
         SlotManager.reconnect(mainWindow.deleteScene.clicked,mainWindow.frames.deleteFrame)
@@ -61,6 +61,7 @@ class SlotManager():
         SlotManager.reconnect(mainWindow.toogleGridAction.triggered,mainWindow.frames.toggleGrid)
         SlotManager.reconnect(mainWindow.openSettingsAction.triggered,mainWindow.changeSettings)
         mainWindow.frames.contentChanged.connect(mainWindow.contentChanged)
+
 
     @staticmethod
     def makeFrameViewerConnections(frameViewer):
