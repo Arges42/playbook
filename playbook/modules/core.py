@@ -1,7 +1,7 @@
 import sys
 from functools import wraps
 from PyQt5.QtWidgets import (QWidget, QToolTip, 
-    QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QColorDialog, QDialogButtonBox, QLineEdit, QGraphicsLineItem, QGraphicsTextItem,
+    QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QColorDialog, QDialogButtonBox, QLineEdit, QGraphicsLineItem, QGraphicsTextItem,QTableWidgetItem,
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsItem, QMenu, QGraphicsObject, QDialog)
 from PyQt5.QtGui import QFont,QIcon, QBrush, QColor, QPen
 from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObject,QDateTime, QLineF, QSizeF,QSize, QRect
@@ -380,4 +380,5 @@ class SingleFrameViewer(QGraphicsView):
     #Overwrite the default drawBackground to avoid calling drawBackground of the frame
     def drawBackground(self,painter,rect):
         pass
+
 

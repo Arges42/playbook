@@ -1,7 +1,9 @@
+import os
+
 from PyQt5.QtWidgets import (QWidget, QToolTip, 
     QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QColorDialog, QDialogButtonBox, QLineEdit,QGraphicsLineItem,QGraphicsTextItem,
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsItem, QMenu, QGraphicsObject, QDialog)
-from PyQt5.QtGui import QFont,QIcon, QBrush, QColor, QPen
+from PyQt5.QtGui import QFont,QIcon, QBrush, QColor, QPen,QKeySequence
 from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObject,QDateTime, QLineF
 from PyQt5.QtXml import QDomDocument,QDomElement
 
@@ -161,3 +163,55 @@ class XmlFormat():
             frame.addItem(text)
 
     
+
+class SettingWriter():
+    
+    SHORTCUT = "##Shortcuts##"
+    def __init__(self,parent=None):
+        self.parent = parent
+
+    def getActions(self):
+        mainWindow = self.parent
+        actions = []
+        actions.append(mainWindow.previous)
+        actions.append(mainWindow.next)
+        actions.append(mainWindow.newScene)
+        actions.append(mainWindow.exitAction)
+        actions.append(mainWindow.saveAction)
+        actions.append(mainWindow.loadAction)
+        actions.append(mainWindow.printPdfAction)
+        actions.append(mainWindow.drawAction)
+        actions.append(mainWindow.eraseAction)
+        actions.append(mainWindow.toogleGridAction)
+
+        return actions
+
+    def writeSettings(self,path="."):
+        f = open(os.path.join(path,"settings.txt"),'w')
+        actions = self.getActions()
+        f.write("##Shortcuts##\n")
+        for action in actions:
+            f.write("{}\t{}\n".format(action.objectName(),action.shortcut().toString()))
+        f.close()
+
+    def loadSettings(self,path="."):
+        try:
+            f = open(os.path.join(path,"settings.txt"),'r')
+        except FileNotFoundError:
+            return
+        for line in f:
+            if line.strip() == self.SHORTCUT:
+                break
+        for line in f:
+            if line[0:2] == "##":
+                break
+            
+            pair = line.strip().split("\t")
+            if len(pair) == 2:
+                objectName,shortcut = pair
+                action = self.parent.findChild(QObject,objectName)
+                try:
+                    action.setShortcut(QKeySequence(shortcut))
+                except:
+                    print("Action or shortcut misdefined!")
+        f.close()

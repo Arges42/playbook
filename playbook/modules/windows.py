@@ -1,6 +1,6 @@
 import sys,os
 from PyQt5.QtWidgets import (QWidget, QToolTip, 
-    QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QHBoxLayout,QVBoxLayout, QColorDialog, QDialogButtonBox, QLineEdit, QDockWidget,QScrollArea,QLabel,QScrollBar,
+    QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QHBoxLayout,QVBoxLayout, QColorDialog, QDialogButtonBox, QLineEdit, QDockWidget,QScrollArea,QLabel,QScrollBar,QMessageBox,
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsItem, QMenu, QGraphicsObject, QDialog, QFileDialog)
 from PyQt5.QtGui import QFont,QIcon, QBrush, QColor, QPen, QPainter, QPixmap,QIntValidator
 from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObject,QDateTime, QFile, QSize, QStandardPaths
@@ -17,8 +17,8 @@ else:
     SRCDIR = os.path.dirname(os.path.dirname(__file__))
 
 from .core import FrameViewer, SingleFrameViewer, Dancer
-from .dataManage import XmlFormat
-from .ui import ClickableLabel,SettingsDialog,OverviewLabel
+from .dataManage import XmlFormat,SettingWriter
+from .ui import ClickableLabel,SettingsDialog,OverviewLabel,ActionDialog
 from .util import Settings,SlotManager
 
 
@@ -26,6 +26,11 @@ from .util import Settings,SlotManager
 IMG_PATH = os.path.join(SRCDIR,'img')
 
 class MainWindow(QMainWindow):
+    ''' Main window of the playbook.
+        The central widget displays the frame viewer and the buttons to switch between the frames.
+        Additional the UI like menus,  toolbars and dock widget are initialized here.
+
+    '''
     
     def __init__(self):
         super().__init__()
@@ -38,6 +43,7 @@ class MainWindow(QMainWindow):
         SlotManager.makeMainWindowConnections(self)
 
         self.setWindowTitle("Playbook - {}".format(self.projectName))
+        SettingWriter(self).loadSettings(SRCDIR)
         
     def initUI(self):
         
@@ -56,12 +62,13 @@ class MainWindow(QMainWindow):
         hLayout = QHBoxLayout()
         hLayout.addStretch(0)
 
-        #Define actions
+        #Define frame viewer actions
         pixmap = QPixmap(os.path.join(IMG_PATH,"prevArrow.svg"))
         self.previous = QPushButton(QIcon(pixmap),"")
         self.previous.setToolTip("Previous frame")
         self.previous.setIconSize(pixmap.rect().size())
         self.previous.setFixedSize(pixmap.rect().size())
+        self.previous.setObjectName("previousFrame")
         hLayout.addWidget(self.previous)
 
         self.frameIDBox = QLineEdit()
@@ -76,6 +83,7 @@ class MainWindow(QMainWindow):
         self.next.setIconSize(pixmap.rect().size())
         self.next.setFixedSize(pixmap.rect().size())
         self.next.setToolTip("Next frame")
+        self.next.setObjectName("nextFrame")
         hLayout.addWidget(self.next)
 
         pixmap = QPixmap(os.path.join(IMG_PATH,"newFrame.svg"))
@@ -83,6 +91,7 @@ class MainWindow(QMainWindow):
         self.newScene.setIconSize(pixmap.rect().size())
         self.newScene.setFixedSize(pixmap.rect().size())
         self.newScene.setToolTip("Create new frame")
+        self.newScene.setObjectName("newFrame")
         hLayout.addWidget(self.newScene)
 
         pixmap = QPixmap(os.path.join(IMG_PATH,"deleteFrame.svg"))
@@ -114,25 +123,30 @@ class MainWindow(QMainWindow):
         self.frames.frameCreated.connect(lambda x: self.overview.addWidget(x))
         self.frames.frameIDChanged.connect(lambda x: self.overview.activeFrameChanged(x))
 
-        #Status Bar and Menu
+        #Define the Actions
         self.exitAction = QAction(QIcon(os.path.join(IMG_PATH,'exit.svg')), '&Exit', self)        
         self.exitAction.setShortcut('Ctrl+Q')
         self.exitAction.setStatusTip('Exit application')
-
+        self.exitAction.setObjectName("exit")
         self.saveAction = QAction('&Save',self)
-
+        self.saveAction.setObjectName("save")
         self.loadAction = QAction('&Load',self)
-
+        self.loadAction.setObjectName("load")
         self.printPdfAction = QAction('&Print',self)
-
+        self.printPdfAction.setObjectName("print")
 
         self.drawAction = QAction(QIcon(os.path.join(IMG_PATH,'pen.svg')),'Toogle drawing',self,checkable=True)
+        self.drawAction.setObjectName("draw")
         self.eraseAction = QAction(QIcon(os.path.join(IMG_PATH,'eraser.svg')),'Toogle eraser',self,checkable=True)
-        self.toogleGridAction = QAction(QIcon(os.path.join(IMG_PATH,'grid.svg')),'Toogle grid',self,checkable=True)
+        self.eraseAction.setObjectName("erase")
+        self.toogleGridAction = QAction(QIcon(os.path.join(IMG_PATH,'grid.svg')),'Toggle grid',self,checkable=True)
         self.toogleGridAction.setChecked(True)
+        self.toogleGridAction.setObjectName("toggleGrid")
         
         self.openSettingsAction = QAction(QIcon(''),'Open settings',self)
+        self.openShortcutAction = QAction(QIcon(''),'Modify shortcuts',self)
 
+        #Status Bar and Menu
         self.statusBar()
 
         menubar = self.menuBar()  
@@ -150,6 +164,7 @@ class MainWindow(QMainWindow):
 
         settingsMenu = menubar.addMenu('&Settings')
         settingsMenu.addAction(self.openSettingsAction)
+        settingsMenu.addAction(self.openShortcutAction)
 
         self.toolbar = self.addToolBar('Exit')
         self.toolbar.addAction(self.exitAction)
@@ -166,6 +181,18 @@ class MainWindow(QMainWindow):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
+    def closeEvent(self,event):
+        SettingWriter(self).writeSettings(SRCDIR)
+        if self.unsavedChanges == True:
+            msg = "You have unsaved changes!\nAre you sure you want to exit?"
+            reply = QMessageBox.question(self, 'Message', 
+                     msg, QMessageBox.Yes, QMessageBox.No)
+
+            if reply == QMessageBox.Yes:
+                event.accept()
+            else:
+                event.ignore()
+        
     def save(self):
         name = QFileDialog.getSaveFileName(self, 'Save File')[0]
         if name:
@@ -177,6 +204,7 @@ class MainWindow(QMainWindow):
             saveFile.close()
             self.unsavedChanges = False
             self.setWindowTitle("playbook - {}".format(self.projectName))
+
 
     def load(self):
         name = QFileDialog.getOpenFileName(self, 'Load File')[0]
@@ -215,6 +243,10 @@ class MainWindow(QMainWindow):
                     pdf_printer.newPage()
             pdf_painter.end()
 
+    def changeShortcuts(self):
+        dialog = ActionDialog(self)
+        dialog.exec_()
+
 
     def contentChanged(self):
         self.unsavedChanges = True
@@ -233,6 +265,11 @@ class MainWindow(QMainWindow):
 
 
 class Overview(QWidget):
+    ''' Dock Widget
+        This widget shows an overview of all created frames.
+        Supports:   Change to a frame with a click.
+                    The active frame is heighlighted.
+    '''
     def __init__(self,parent=None):
         super().__init__(parent)
         self.initUI()

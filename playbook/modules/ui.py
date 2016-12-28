@@ -1,9 +1,9 @@
 import sys
 from PyQt5.QtWidgets import (QWidget, QToolTip, 
-    QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QColorDialog, QDialogButtonBox, QLineEdit, QLabel, QSpinBox,
+    QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QColorDialog, QDialogButtonBox, QLineEdit, QLabel, QSpinBox,QTableWidget,QVBoxLayout,QAbstractItemView,QTableWidgetItem,
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsItem, QMenu, QGraphicsObject, QDialog)
-from PyQt5.QtGui import QFont,QIcon, QBrush, QColor, QPen, QPixmap
-from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObject,QDateTime, QSize
+from PyQt5.QtGui import QFont,QIcon, QBrush, QColor, QPen, QPixmap,QKeySequence
+from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObject,QDateTime, QSize,QEvent
 
 from .util import Settings
 
@@ -153,6 +153,94 @@ class SettingsDialog(QDialog):
 
         return {"projectName" : projectName,"roomHeight" : roomHeight, "roomWidth" : roomWidth, "gridSize" : gridSize, "dancerWidth" : dancerWidth, "accept": result == QDialog.Accepted}
 
+
+class ActionDialog(QDialog):
+    def __init__(self,parent=None):
+        super().__init__(parent)
+
+        self.itemActive = None
+        
+        self.actions = self.getActions()
+        layout = QVBoxLayout(self)
+        self.table = QTableWidget(self)
+        self.table.setRowCount(len(self.actions))
+        self.table.setColumnCount(2)
+        self.table.setHorizontalHeaderLabels(["Action","Shortcut"])  
+        self.table.verticalHeader().setVisible(False)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+
+        for i,action in enumerate(self.actions):
+            name = QTableWidgetItem(action.toolTip())
+            name.setFlags(Qt.NoItemFlags)
+            self.table.setItem(i,0,name)
+            shortcut = QTableWidgetItem(action.shortcut().toString())
+            shortcut.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+            self.table.setItem(i,1,shortcut)
+        self.table.cellChanged.connect(lambda r,c:self.shortcutChanged(r,c))
+        self.table.itemActivated.connect(lambda x:self.itemActivated(x))
+        self.table.installEventFilter(self)
+
+        layout.addWidget(self.table)
+        self.getActions()
+        # OK and Cancel buttons
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel,
+            Qt.Horizontal, self)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons) 
+
+    def getActions(self):
+        ''' Return all actions, which are defined in the main window, that should have 
+            a customizable shortcut.
+        '''
+        mainWindow = self.parent()
+        actions = []
+        actions.append(mainWindow.previous)
+        actions.append(mainWindow.next)
+        actions.append(mainWindow.newScene)
+        actions.append(mainWindow.exitAction)
+        actions.append(mainWindow.saveAction)
+        actions.append(mainWindow.loadAction)
+        actions.append(mainWindow.printPdfAction)
+        actions.append(mainWindow.drawAction)
+        actions.append(mainWindow.eraseAction)
+        actions.append(mainWindow.toogleGridAction)
+
+        return actions
+
+    def shortcutChanged(self,row,column):
+        newShortcut = QKeySequence(self.table.item(row,column).text()).toString()
+        if newShortcut != "":
+            self.actions[column].setShortcut(newShortcut)
+
+    def itemActivated(self,item):
+        self.itemActive = item
+
+    def eventFilter(self,obj,event):
+        if(event.type()==QEvent.KeyRelease and self.itemActive):
+            keyInt = event.key()
+
+            modifiers = event.modifiers()
+
+            if(modifiers & Qt.ShiftModifier): 
+                keyInt += Qt.SHIFT 
+            if(modifiers & Qt.ControlModifier):
+                keyInt += Qt.CTRL 
+            if(modifiers & Qt.AltModifier): 
+                keyInt += Qt.ALT 
+            if(modifiers & Qt.MetaModifier):
+                keyInt += Qt.META
+            self.itemActive.setText(QKeySequence(keyInt).toString())
+            
+            self.itemActive.setSelected(False)
+            self.itemActive = None
+            return True
+        else:
+            return False
+
+    
+
 class ClickableLabel(QLabel):
     clicked = pyqtSignal()
 
@@ -182,4 +270,5 @@ class OverviewLabel(QLabel):
             self.setStyleSheet("border: 1px solid blue")
         else :
             self.setStyleSheet("border: 1px solid black")
+
 

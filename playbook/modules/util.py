@@ -60,6 +60,7 @@ class SlotManager():
         SlotManager.reconnect(mainWindow.eraseAction.triggered,mainWindow.frames.toggleErase)
         SlotManager.reconnect(mainWindow.toogleGridAction.triggered,mainWindow.frames.toggleGrid)
         SlotManager.reconnect(mainWindow.openSettingsAction.triggered,mainWindow.changeSettings)
+        SlotManager.reconnect(mainWindow.openShortcutAction.triggered,mainWindow.changeShortcuts)
         mainWindow.frames.contentChanged.connect(mainWindow.contentChanged)
 
 
