@@ -1,6 +1,6 @@
 from pylatex import Document, TikZ,PageStyle,Foot,simple_page_number
 from pylatex.basic import NewPage
-from pylatex.base_classes import LatexObject,Command
+from pylatex.base_classes import LatexObject,Command,ContainerCommand
 from pylatex.package import Package
 
 from PyQt5.QtXml import QDomDocument,QDomElement
@@ -134,20 +134,33 @@ class Xml2Pdf():
             domScene = domScenes.item(i)
             domScene = domScene.toElement()
             dancers = self.getDancer(domScene)
-            self.createFrame(dancers,doc)
+            texts = self.getTexts(domScene)
+            lines = self.getLines(domScene)
+            self.createFrame(dancers,texts,lines,doc)
             doc.append(NewPage())
                 
 
-    def createFrame(self,dancers,doc):
+    def createFrame(self,dancers,texts,lines,doc):
         with doc.create(TikZ()) as pic:
             pic.append(Draw(pos1="(0,0)",pos2="(17,17)")) 
             for dancer in dancers:
                 self.createDancer(dancer,doc)
+            for line in lines:
+                self.createLine(line,doc)
+            for text in texts:
+                self.createText(text,doc)
 
     def createDancer(self,dancer,doc):
-        doc.append(Command("definecolor{{tmpcolor}}{{HTML}}{{{}{}{}}};".format(dancer["color"][1:3].upper(),dancer["color"][3:5].upper(),dancer["color"][5:7].upper())))
-        opt = 'shape=circle,draw,minimum width={}, fill=tmpcolor,label=below:{}'.format(self.dancerWidth,dancer["name"])  
+        doc.append(Command("definecolor{{fillColor}}{{HTML}}{{{}{}{}}};".format(dancer["color"][1:3].upper(),dancer["color"][3:5].upper(),dancer["color"][5:7].upper())))
+        doc.append(Command("definecolor{{borderColor}}{{HTML}}{{{}{}{}}};".format(dancer["boundaryColor"][1:3].upper(),dancer["boundaryColor"][3:5].upper(),dancer["boundaryColor"][5:7].upper())))
+        opt = 'shape=circle,line width=3, draw=borderColor ,minimum width={}, fill=fillColor,label=below:{}'.format(self.dancerWidth,dancer["name"])  
         doc.append(Node(options=opt,position=self.pixel2cm(dancer["posX"],dancer["posY"])))
+
+    def createText(self,text,doc):
+        doc.append(Node(label=text["content"],position=self.pixel2cm(text["x"],text["y"])))
+
+    def createLine(self,line,doc):
+        doc.append(Draw(pos1=self.pixel2cm(line["x1"],line["y1"]),pos2=self.pixel2cm(line["x2"],line["y2"]),shape="--"))
 
     def getDancer(self,domScene): 
         dancers = []
@@ -165,6 +178,34 @@ class Xml2Pdf():
             dancers.append(dancer)   
         return dancers
 
+    def getTexts(self,domScene):
+        texts = []
+        domTexts = domScene.elementsByTagName("Text")
+        for j in range(domTexts.length()):
+            domText = domTexts.item(j)
+            domText = domText.toElement()
+            text = {}
+            text["y"] = domText.attribute("y")
+            text["x"] = domText.attribute("x")
+            text["content"] = domText.attribute("content")
+            text["rotation"] = domText.attribute("rotation")
+            texts.append(text)
+        return texts
+
+    def getLines(self,domScene):
+        lines = []
+        domLines = domScene.elementsByTagName("Line")
+        for j in range(domLines.length()):
+            domLine = domLines.item(j)
+            domLine = domLine.toElement()
+            line = {}
+            line["x1"] = domLine.attribute("x1")
+            line["y1"] = domLine.attribute("y1")
+            line["x2"] = domLine.attribute("x2")
+            line["y2"] = domLine.attribute("y2")
+            lines.append(line)
+        return lines
+                    
     def pixel2cm(self,px,py,cmW=17,cmH=17):
         pixelW=float(self.roomWidth)
         pixelH=float(self.roomHeight)

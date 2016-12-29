@@ -280,6 +280,7 @@ class Dancer(QGraphicsObject):
         painter.setPen(QPen(QBrush(self.boundaryColor),int(self.dancerWidth*0.1)));
         painter.setBrush(QBrush(self.color))
         painter.drawEllipse(0,0,self.dancerWidth,self.dancerWidth)
+        painter.setPen(QPen())
         painter.drawText(QPointF(-10,self.dancerWidth+10),self.name)
 
     
