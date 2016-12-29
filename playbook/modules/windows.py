@@ -20,6 +20,7 @@ from .core import FrameViewer, SingleFrameViewer, Dancer
 from .dataManage import XmlFormat,SettingWriter
 from .ui import ClickableLabel,SettingsDialog,OverviewLabel,ActionDialog
 from .util import Settings,SlotManager
+from .pdfGeneration import Xml2Pdf
 
 
 
@@ -220,6 +221,15 @@ class MainWindow(QMainWindow):
             self.overview.addWidget()
 
     def printToPdf(self):
+        doc = QDomDocument()
+        formatter = XmlFormat(doc)
+        doc.appendChild(formatter.projectToXml(self)) 
+        pdf = Xml2Pdf()
+        f = open("xml2pdf.tmp","w")        
+        f.write(doc.toString())
+        f.close()
+        pdf.createPdf("xml2pdf.tmp")
+
         pdf_printer = QPrinter()
         pdf_printer.setOutputFormat(QPrinter.PdfFormat)
         pdf_printer.setPaperSize(self.frames.sceneRect().size(), QPrinter.Point)
