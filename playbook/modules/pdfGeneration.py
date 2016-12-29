@@ -111,7 +111,7 @@ class Xml2Pdf():
         return doc
 
     
-    def createPdf(self,xmlFile):
+    def createPdf(self,xmlFile,outputFile,tex=True):
         self.dom = QDomDocument()
         openFile = QFile(xmlFile)
         self.dom.setContent(openFile)
@@ -123,8 +123,9 @@ class Xml2Pdf():
         domFrame = domProject.elementsByTagName("Frame").item(0).toElement()
         self.createDoc(domFrame,self.doc)
 
-        self.doc.generate_pdf(clean_tex=False)
-        self.doc.generate_tex()
+        self.doc.generate_pdf(outputFile,clean_tex=False)
+        if tex:
+            self.doc.generate_tex()
 
     def createDoc(self,domFrame,doc):
 
@@ -145,7 +146,7 @@ class Xml2Pdf():
 
     def createDancer(self,dancer,doc):
         doc.append(Command("definecolor{{tmpcolor}}{{HTML}}{{{}{}{}}};".format(dancer["color"][1:3].upper(),dancer["color"][3:5].upper(),dancer["color"][5:7].upper())))
-        opt = 'shape=circle,draw,minimum width={}, fill=tmpcolor,label=center:{}'.format(self.dancerWidth,dancer["name"])  
+        opt = 'shape=circle,draw,minimum width={}, fill=tmpcolor,label=below:{}'.format(self.dancerWidth,dancer["name"])  
         doc.append(Node(options=opt,position=self.pixel2cm(dancer["posX"],dancer["posY"])))
 
     def getDancer(self,domScene): 
