@@ -1,4 +1,7 @@
-import sys,os
+import sys
+import os
+import subprocess
+
 from PyQt5.QtWidgets import (QWidget, QToolTip, 
     QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QHBoxLayout,QVBoxLayout, QColorDialog, QDialogButtonBox, QLineEdit, QDockWidget,QScrollArea,QLabel,QScrollBar,QMessageBox,
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsItem, QMenu, QGraphicsObject, QDialog, QFileDialog)
@@ -36,6 +39,9 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         
+        self.setupCheck()
+
+
         self.settings = Settings(self)
         self.frames = FrameViewer(self,self.settings)
         self.projectName = "unnamed"
@@ -46,6 +52,14 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Playbook - {}".format(self.projectName))
         SettingWriter(self).loadSettings(SRCDIR)
         
+    def setupCheck(self):
+        pdflatex = subprocess.run('pdflatex --version',shell=True,stdout=subprocess.PIPE)
+        latexmk = subprocess.run('latexmk --version',shell=True,stdout=subprocess.PIPE)
+        if pdflatex.returncode == 0 or latexmk.returncode == 0:
+            self.latex = True
+        else:
+            self.latex = False
+
     def initUI(self):
         
         mainWidget = QWidget(self)
@@ -221,45 +235,45 @@ class MainWindow(QMainWindow):
             self.overview.addWidget()
 
     def printToPdf(self):
-        outname = os.path.join(QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation),self.projectName)
-        name = QFileDialog.getSaveFileName(self, 'Print to pdf',outname,'PDF (*.pdf)')[0]
-        if name:
-            name = os.path.splitext(name)[0]
-            doc = QDomDocument()
-            formatter = XmlFormat(doc)
-            doc.appendChild(formatter.projectToXml(self)) 
-            pdf = Xml2Pdf()
-            f = open("xml2pdf.tmp","w")        
-            f.write(doc.toString())
-            f.close()
-            pdf.createPdf("xml2pdf.tmp",name)
-            os.remove("xml2pdf.tmp")
+        if self.latex:
+            outname = os.path.join(QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation),self.projectName)
+            name = QFileDialog.getSaveFileName(self, 'Print to pdf',outname,'PDF (*.pdf)')[0]
+            if name:
+                name = os.path.splitext(name)[0]
+                doc = QDomDocument()
+                formatter = XmlFormat(doc)
+                doc.appendChild(formatter.projectToXml(self)) 
+                pdf = Xml2Pdf()
+                f = open("xml2pdf.tmp","w")        
+                f.write(doc.toString())
+                f.close()
+                pdf.createPdf("xml2pdf.tmp",name)
+                os.remove("xml2pdf.tmp")
 
-        '''
-        pdf_printer = QPrinter()
-        pdf_printer.setOutputFormat(QPrinter.PdfFormat)
-        pdf_printer.setPaperSize(self.frames.sceneRect().size(), QPrinter.Point)
-        pdf_printer.setFullPage(True)
+        else:
+            pdf_printer = QPrinter()
+            pdf_printer.setOutputFormat(QPrinter.PdfFormat)
+            pdf_printer.setPaperSize(self.frames.sceneRect().size(), QPrinter.Point)
+            pdf_printer.setFullPage(True)
+            
+            pdf_printer.setOutputFileName(os.path.join(QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation),self.projectName+".pdf"))
+            pdf_printer.setResolution(144)
+            pdf_printer.newPage()
+            printDialog = QPrintDialog(pdf_printer, self)
+            if(printDialog.exec_() == QDialog.Accepted):
+                pdf_painter = QPainter()
+                pdf_painter.begin(pdf_printer)
+                for i,scene in enumerate(self.frames.sceneCollection):
+                    #self.frames.setScene(scene)
+                    #viewport = self.frames.viewport().rect()
+                    #self.frames.render(pdf_painter, QRectF(pdf_printer.width()*0.25, pdf_printer.height()*0.1,
+                    #       pdf_printer.width(), pdf_printer.height()/2. ),
+                    #(self.frames.mapFromScene(QRectF(viewport)).boundingRect()))
+                    scene.render(pdf_painter)
+                    if i<len(self.frames.sceneCollection)-1:
+                        pdf_printer.newPage()
+                pdf_painter.end()
         
-        pdf_printer.setOutputFileName(os.path.join(QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation),self.projectName+".pdf"))
-        pdf_printer.setResolution(144)
-        pdf_printer.newPage()
-        printDialog = QPrintDialog(pdf_printer, self)
-        print(printDialog.options())
-        if(printDialog.exec_() == QDialog.Accepted):
-            pdf_painter = QPainter()
-            pdf_painter.begin(pdf_printer)
-            for i,scene in enumerate(self.frames.sceneCollection):
-                #self.frames.setScene(scene)
-                #viewport = self.frames.viewport().rect()
-                #self.frames.render(pdf_painter, QRectF(pdf_printer.width()*0.25, pdf_printer.height()*0.1,
-                #       pdf_printer.width(), pdf_printer.height()/2. ),
-                #(self.frames.mapFromScene(QRectF(viewport)).boundingRect()))
-                scene.render(pdf_painter)
-                if i<len(self.frames.sceneCollection)-1:
-                    pdf_printer.newPage()
-            pdf_painter.end()
-        '''
 
     def changeShortcuts(self):
         dialog = ActionDialog(self)
