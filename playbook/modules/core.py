@@ -3,7 +3,7 @@ from functools import wraps
 from PyQt5.QtWidgets import (QWidget, QToolTip, 
     QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QColorDialog, QDialogButtonBox, QLineEdit, QGraphicsLineItem, QGraphicsTextItem,QTableWidgetItem,
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsItem, QMenu, QGraphicsObject, QDialog)
-from PyQt5.QtGui import QFont,QIcon, QBrush, QColor, QPen
+from PyQt5.QtGui import QFont,QIcon, QBrush, QColor, QPen,QContextMenuEvent
 from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObject,QDateTime, QLineF, QSizeF,QSize, QRect
 
 
@@ -81,24 +81,24 @@ class FrameViewer(QGraphicsView):
         self.setSceneRect(self.mapToScene(self.viewport().rect()).boundingRect())
         self.sceneCollection.insert(self.activeFrameID,self.frame)
         self.activeFrameID+=1
-        self.frameIDChanged.emit(self.activeFrameID)
         self.frameCreated.emit(self.activeFrameID)
+        self.frameIDChanged.emit(self.activeFrameID)
 
     @changeWrapper
     def deleteFrame(self):
         if len(self.sceneCollection) == 1:
             self.scene().clear()
         else:
-            if self.activeFrameID == (len(self.sceneCollection)-1):
-                newID = self.activeFrameID-1
-            else:
+            del self.sceneCollection[self.activeFrameID]
+            if self.activeFrameID == 0:
                 newID = self.activeFrameID
+            else:
+                newID = self.activeFrameID-1
             self.frame = self.sceneCollection[newID]
             self.setScene(self.frame)
-            del self.sceneCollection[self.activeFrameID]
-            self.activeFrameID -= 1
-            self.frameIDChanged.emit(self.activeFrameID)
             self.frameDeleted.emit(self.activeFrameID)
+            self.activeFrameID = newID
+            self.frameIDChanged.emit(self.activeFrameID)
 
   
     def nextFrame(self):
@@ -153,7 +153,7 @@ class FrameViewer(QGraphicsView):
             addText = QAction('&Add text',self)
             addText.triggered.connect(lambda: self.addText(event.pos()))
             menu.addAction(addText)
-            menu.exec_(event.globalPos())
+            menu.exec_(event.globalPos())    
 
     def resizeEvent(self, event):
         self.resized.emit(event.size()) 

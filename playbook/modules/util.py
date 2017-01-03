@@ -62,7 +62,11 @@ class SlotManager():
         SlotManager.reconnect(mainWindow.openSettingsAction.triggered,mainWindow.changeSettings)
         SlotManager.reconnect(mainWindow.openShortcutAction.triggered,mainWindow.changeShortcuts)
         mainWindow.frames.contentChanged.connect(mainWindow.contentChanged)
-
+        mainWindow.frames.frameCreated.connect(lambda x: mainWindow.overview.addFrameWidget(x))
+        mainWindow.frames.frameIDChanged.connect(lambda x: mainWindow.overview.activeFrameChanged(x))
+        mainWindow.frames.frameDeleted.connect(lambda x: mainWindow.overview.removeFrameWidget(x))
+        
+        mainWindow.frames.frameIDChanged.emit(mainWindow.frames.activeFrameID)
 
     @staticmethod
     def makeFrameViewerConnections(frameViewer):

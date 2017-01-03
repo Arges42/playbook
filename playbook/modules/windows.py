@@ -3,7 +3,7 @@ import os
 import subprocess
 
 from PyQt5.QtWidgets import (QWidget, QToolTip, 
-    QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QHBoxLayout,QVBoxLayout, QColorDialog, QDialogButtonBox, QLineEdit, QDockWidget,QScrollArea,QLabel,QScrollBar,QMessageBox,
+    QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QHBoxLayout,QVBoxLayout, QColorDialog, QDialogButtonBox, QLineEdit, QDockWidget,QScrollArea,QLabel,QScrollBar,QMessageBox,QTextEdit,
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsItem, QMenu, QGraphicsObject, QDialog, QFileDialog)
 from PyQt5.QtGui import QFont,QIcon, QBrush, QColor, QPen, QPainter, QPixmap,QIntValidator
 from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObject,QDateTime, QFile, QSize, QStandardPaths
@@ -135,8 +135,16 @@ class MainWindow(QMainWindow):
         dock.setWidget(self.overview)
         dock.setMinimumSize(150,0)
         self.addDockWidget(Qt.RightDockWidgetArea, dock)
-        self.frames.frameCreated.connect(lambda x: self.overview.addWidget(x))
-        self.frames.frameIDChanged.connect(lambda x: self.overview.activeFrameChanged(x))
+
+        dock = QDockWidget("Notes", self)
+        dock.setAllowedAreas(Qt.BottomDockWidgetArea)
+        self.notes = Notes(dock)
+        dock.setWidget(self.notes)
+        self.addDockWidget(Qt.BottomDockWidgetArea, dock)
+        self.frames.frameIDChanged.connect(lambda x:self.notes.frameChanged(x))
+        self.frames.frameDeleted.connect(lambda x: self.notes.frameDeleted(x))
+        self.frames.frameCreated.connect(lambda x: self.notes.frameCreated(x))
+
 
         #Define the Actions
         self.exitAction = QAction(QIcon(os.path.join(IMG_PATH,'exit.svg')), '&Exit', self)        
@@ -232,7 +240,7 @@ class MainWindow(QMainWindow):
             openFile.close() 
             self.centralWidget().update()
             self.setWindowTitle("playbook - {}".format(self.projectName))
-            self.overview.addWidget()
+            self.overview.addFrameWidget()
 
     def printToPdf(self):
         if self.latex:
@@ -314,13 +322,13 @@ class Overview(QWidget):
         self.vLayout.setSpacing(20)
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         self.scrollArea.setMinimumSize(150,self.parent().parent().frames.size().height())
-        self.addWidget()
+        self.addFrameWidget()
 
         self.parent().parent().frames.resized.connect(lambda x:self.adaptFrameViewerSize(x))
 
         
 
-    def addWidget(self,frameID = 0):
+    def addFrameWidget(self,frameID = 0):
         for i in reversed(range(self.vLayout.count())): 
             widget = self.vLayout.takeAt(i).widget()
             if widget is not None:
@@ -336,6 +344,14 @@ class Overview(QWidget):
             self.vLayout.insertWidget(i,label)
         self.activeFrameChanged(self.parent().parent().frames.activeFrameID)
     
+    def removeFrameWidget(self, frameID = 0):
+        try:
+            widget = self.vLayout.takeAt(frameID).widget()
+            if widget is not None:
+                widget = widget.setParent(None)
+        except:
+            print("Tried to remove overview frame {}, but it could not be found.".format(frameID))
+
     def activeFrameChanged(self,activeFrameID):
         for i in reversed(range(self.vLayout.count())):
             widget = self.vLayout.itemAt(i).widget()
@@ -351,4 +367,42 @@ class Overview(QWidget):
 
     def adaptFrameViewerSize(self,size):
         self.scrollArea.setMinimumSize(self.scrollArea.minimumSize().width(),size.height()-7)
+
+class Notes(QWidget):
+    def __init__(self,parent=None):
+        super().__init__(parent)
+
+        self.textCollection = [""]
+        self.activeFrameID = 0
+        self.initUI()
+        self.textEdit.textChanged.connect(self.updateTextCollection)
+
+    def initUI(self):
+        self.textEdit = QTextEdit(self)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.textEdit)
+
+    def frameCreated(self, frameID):
+        self.textCollection.insert(frameID,"")
         
+    def frameChanged(self,frameID):
+        self.activeFrameID = frameID
+        try:
+            self.textEdit.setHtml(self.textCollection[frameID])
+        except IndexError:
+            self.textCollection.append("")
+            self.textEdit.setHtml("")
+
+    def addContent(self,frameID,content):
+        try:
+            self.activeFrameID = int(frameID)
+            self.textCollection.append("")
+            self.textEdit.setHtml(content)
+        except:
+            pass    
+
+    def frameDeleted(self,frameID):
+        del self.textCollection[frameID]
+
+    def updateTextCollection(self):
+        self.textCollection[self.activeFrameID] = self.textEdit.toHtml()

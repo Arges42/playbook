@@ -58,6 +58,7 @@ class XmlFormat():
 
         return root
 
+
     def frameViewerToXml(self,frameViewer):
         root = self.doc.createElement("Frame")
 
@@ -66,6 +67,15 @@ class XmlFormat():
         for scene in frameViewer.sceneCollection:
             root.appendChild(self.sceneToXml(scene))
 
+        return root
+
+    def notesToXml(self,notes):
+        root = self.doc.createElement("Notes")        
+        for i,note in enumerate(notes.textCollection):
+            child = self.doc.createElement("Note")
+            child.setAttribute("frameID",i)
+            child.setAttribute("content",note)
+            root.appendChild(child)
         return root
 
     def projectToXml(self,mainWindow):
@@ -77,6 +87,7 @@ class XmlFormat():
         root.setAttribute("dancerWidth",mainWindow.settings.get("dancerWidth"))
 
         root.appendChild(self.frameViewerToXml(mainWindow.frames))
+        root.appendChild(self.notesToXml(mainWindow.notes))
         
         return root
 
@@ -94,6 +105,8 @@ class XmlFormat():
         mainWindow.frames.settings = self.settings
         mainWindow.frames = self.xmlToFrameViewer(mainWindow.frames,domProject)       
 
+        self.xmlToNotes(mainWindow.notes,domProject)
+        
         SlotManager.makeMainWindowConnections(mainWindow)
 
     def xmlToFrameViewer(self,activeFrameViewer,domProject):
@@ -102,13 +115,24 @@ class XmlFormat():
         activeFrameID = domFrame.attribute("activeFrameID")
         
         activeFrameViewer.clear()
-        activeFrameViewer.activeFrameID = int(activeFrameID)
+        try:
+            activeFrameViewer.activeFrameID = int(activeFrameID)
+        except:
+            activeFrameViewer.activeFrameID = 0
+
         activeFrameViewer.sceneCollection = self.xmlToFrameCollection(activeFrameViewer,domFrame)
         activeFrameViewer.frame = activeFrameViewer.sceneCollection[activeFrameViewer.activeFrameID]
         activeFrameViewer.setScene(activeFrameViewer.sceneCollection[activeFrameViewer.activeFrameID])
 
         SlotManager.makeFrameViewerConnections(activeFrameViewer)
         return activeFrameViewer
+
+    def xmlToNotes(self,notes,domProject):
+        domNotes = domProject.elementsByTagName("Notes").item(0).toElement().elementsByTagName("Note")
+        
+        for i in range(domNotes.length()):
+            domNote = domNotes.item(i).toElement()
+            notes.addContent(domNote.attribute("frameID"),domNote.attribute("content"))
 
     def xmlToFrameCollection(self,activeFrameViewer,domFrame):
         frames = []
