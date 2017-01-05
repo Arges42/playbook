@@ -2,7 +2,7 @@ import sys
 import os
 import subprocess
 
-from PyQt5.QtWidgets import (QWidget, QToolTip, 
+from PyQt5.QtWidgets import (QWidget, QToolTip,
     QPushButton, QMessageBox, QApplication, QDesktopWidget, QMainWindow, QAction, qApp, QGridLayout, QFormLayout, QHBoxLayout,QVBoxLayout, QColorDialog, QDialogButtonBox, QLineEdit, QDockWidget,QScrollArea,QLabel,QScrollBar,QMessageBox,QTextEdit,
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsItem, QMenu, QGraphicsObject, QDialog, QFileDialog)
 from PyQt5.QtGui import QFont,QIcon, QBrush, QColor, QPen, QPainter, QPixmap,QIntValidator
@@ -12,18 +12,18 @@ from PyQt5.QtXml import QDomDocument
 from PyQt5.QtPrintSupport import QPrinter, QPrintDialog
 
 if getattr(sys, 'frozen', False):
-    # The application is frozen
+    #  The application is frozen
     SRCDIR = os.path.dirname(sys.executable)
 else:
-    # The application is not frozen
-    # Change this bit to match where you store your data files:
+    #  The application is not frozen
+    #  Change this bit to match where you store your data files:
     SRCDIR = os.path.dirname(os.path.dirname(__file__))
 
-from .core import FrameViewer, SingleFrameViewer, Dancer
+from .core import FrameViewer, SingleFrameViewer
 from .dataManage import XmlFormat,SettingWriter
-from .ui import ClickableLabel,SettingsDialog,OverviewLabel,ActionDialog
+from .ui import SettingsDialog,OverviewLabel,ActionDialog
 from .util import Settings,SlotManager
-from .pdfGeneration import Xml2Pdf
+# from .pdfGeneration import Xml2Pdf
 
 
 
@@ -35,10 +35,10 @@ class MainWindow(QMainWindow):
         Additional the UI like menus,  toolbars and dock widget are initialized here.
 
     '''
-    
+
     def __init__(self):
         super().__init__()
-        
+
         self.setupCheck()
 
 
@@ -51,7 +51,7 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Playbook - {}".format(self.projectName))
         SettingWriter(self).loadSettings(SRCDIR)
-        
+
     def setupCheck(self):
         pdflatex = subprocess.run('pdflatex --version',shell=True,stdout=subprocess.PIPE)
         latexmk = subprocess.run('latexmk --version',shell=True,stdout=subprocess.PIPE)
@@ -61,23 +61,21 @@ class MainWindow(QMainWindow):
             self.latex = False
 
     def initUI(self):
-        
+
         mainWidget = QWidget(self)
         self.setCentralWidget(mainWidget)
 
-
-        #Define child widgets
+        # Define child widgets
         grid = QGridLayout()
         mainWidget.setLayout(grid)
 
-        
         grid.addWidget(self.frames)
 
         frameStatus = QWidget(self)
         hLayout = QHBoxLayout()
         hLayout.addStretch(0)
 
-        #Define frame viewer actions
+        # Define frame viewer actions
         pixmap = QPixmap(os.path.join(IMG_PATH,"prevArrow.svg"))
         self.previous = QPushButton(QIcon(pixmap),"")
         self.previous.setToolTip("Previous frame")
@@ -117,18 +115,18 @@ class MainWindow(QMainWindow):
         hLayout.addWidget(self.deleteScene)
 
         frameStatus.setLayout(hLayout)
-        
 
 
-        
+
+
         grid.addWidget(frameStatus)
-        #Main window position and icon
+        # Main window position and icon
         self.resize(600, 600)
         self.center()
-        self.setWindowIcon(QIcon(os.path.join(IMG_PATH,'GrowlLogo.png'))) 
+        self.setWindowIcon(QIcon(os.path.join(IMG_PATH,'GrowlLogo.png')))
 
-        
-        #Dock widgets
+
+        # Dock widgets
         dock = QDockWidget("Overview", self)
         dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         self.overview = Overview(dock)
@@ -146,8 +144,8 @@ class MainWindow(QMainWindow):
         self.frames.frameCreated.connect(lambda x: self.notes.frameCreated(x))
 
 
-        #Define the Actions
-        self.exitAction = QAction(QIcon(os.path.join(IMG_PATH,'exit.svg')), '&Exit', self)        
+        # Define the Actions
+        self.exitAction = QAction(QIcon(os.path.join(IMG_PATH,'exit.svg')), '&Exit', self)
         self.exitAction.setShortcut('Ctrl+Q')
         self.exitAction.setStatusTip('Exit application')
         self.exitAction.setObjectName("exit")
@@ -165,18 +163,18 @@ class MainWindow(QMainWindow):
         self.toogleGridAction = QAction(QIcon(os.path.join(IMG_PATH,'grid.svg')),'Toggle grid',self,checkable=True)
         self.toogleGridAction.setChecked(True)
         self.toogleGridAction.setObjectName("toggleGrid")
-        
+
         self.openSettingsAction = QAction(QIcon(''),'Open settings',self)
         self.openShortcutAction = QAction(QIcon(''),'Modify shortcuts',self)
 
-        #Status Bar and Menu
+        # Status Bar and Menu
         self.statusBar()
 
-        menubar = self.menuBar()  
-        menubar.setNativeMenuBar(False)   
+        menubar = self.menuBar()
+        menubar.setNativeMenuBar(False)
         fileMenu = menubar.addMenu('&File')
-        fileMenu.addAction(self.exitAction)  
-        fileMenu.addAction(self.saveAction)  
+        fileMenu.addAction(self.exitAction)
+        fileMenu.addAction(self.saveAction)
         fileMenu.addAction(self.loadAction)
         fileMenu.addAction(self.printPdfAction)
 
@@ -198,7 +196,7 @@ class MainWindow(QMainWindow):
         self.show()
 
     def center(self):
-        
+
         qr = self.frameGeometry()
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
@@ -208,20 +206,20 @@ class MainWindow(QMainWindow):
         SettingWriter(self).writeSettings(SRCDIR)
         if self.unsavedChanges == True:
             msg = "You have unsaved changes!\nAre you sure you want to exit?"
-            reply = QMessageBox.question(self, 'Message', 
+            reply = QMessageBox.question(self, 'Message',
                      msg, QMessageBox.Yes, QMessageBox.No)
 
             if reply == QMessageBox.Yes:
                 event.accept()
             else:
                 event.ignore()
-        
+
     def save(self):
         name = QFileDialog.getSaveFileName(self, 'Save File')[0]
         if name:
             doc = QDomDocument()
             formatter = XmlFormat(doc)
-            doc.appendChild(formatter.projectToXml(self))       
+            doc.appendChild(formatter.projectToXml(self))
             saveFile = open(name,'w')
             saveFile.write(doc.toString())
             saveFile.close()
@@ -237,12 +235,13 @@ class MainWindow(QMainWindow):
             doc.setContent(openFile)
             formatter = XmlFormat(doc)
             formatter.xmlToProject(self)
-            openFile.close() 
+            openFile.close()
             self.centralWidget().update()
             self.setWindowTitle("playbook - {}".format(self.projectName))
             self.overview.addFrameWidget()
 
     def printToPdf(self):
+        '''
         if self.latex:
             outname = os.path.join(QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation),self.projectName)
             name = QFileDialog.getSaveFileName(self, 'Print to pdf',outname,'PDF (*.pdf)')[0]
@@ -250,38 +249,37 @@ class MainWindow(QMainWindow):
                 name = os.path.splitext(name)[0]
                 doc = QDomDocument()
                 formatter = XmlFormat(doc)
-                doc.appendChild(formatter.projectToXml(self)) 
+                doc.appendChild(formatter.projectToXml(self))
                 pdf = Xml2Pdf()
-                f = open("xml2pdf.tmp","w")        
+                f = open("xml2pdf.tmp","w")
                 f.write(doc.toString())
                 f.close()
                 pdf.createPdf("xml2pdf.tmp",name)
                 os.remove("xml2pdf.tmp")
+        '''
+        pdf_printer = QPrinter()
+        pdf_printer.setOutputFormat(QPrinter.PdfFormat)
+        pdf_printer.setPaperSize(self.frames.sceneRect().size(), QPrinter.Point)
+        pdf_printer.setFullPage(True)
 
-        else:
-            pdf_printer = QPrinter()
-            pdf_printer.setOutputFormat(QPrinter.PdfFormat)
-            pdf_printer.setPaperSize(self.frames.sceneRect().size(), QPrinter.Point)
-            pdf_printer.setFullPage(True)
-            
-            pdf_printer.setOutputFileName(os.path.join(QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation),self.projectName+".pdf"))
-            pdf_printer.setResolution(144)
-            pdf_printer.newPage()
-            printDialog = QPrintDialog(pdf_printer, self)
-            if(printDialog.exec_() == QDialog.Accepted):
-                pdf_painter = QPainter()
-                pdf_painter.begin(pdf_printer)
-                for i,scene in enumerate(self.frames.sceneCollection):
-                    #self.frames.setScene(scene)
-                    #viewport = self.frames.viewport().rect()
-                    #self.frames.render(pdf_painter, QRectF(pdf_printer.width()*0.25, pdf_printer.height()*0.1,
-                    #       pdf_printer.width(), pdf_printer.height()/2. ),
-                    #(self.frames.mapFromScene(QRectF(viewport)).boundingRect()))
-                    scene.render(pdf_painter)
-                    if i<len(self.frames.sceneCollection)-1:
-                        pdf_printer.newPage()
-                pdf_painter.end()
-        
+        pdf_printer.setOutputFileName(os.path.join(QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation),self.projectName+".pdf"))
+        pdf_printer.setResolution(144)
+        pdf_printer.newPage()
+        printDialog = QPrintDialog(pdf_printer, self)
+        if(printDialog.exec_() == QDialog.Accepted):
+            pdf_painter = QPainter()
+            pdf_painter.begin(pdf_printer)
+            for i,scene in enumerate(self.frames.sceneCollection):
+                # self.frames.setScene(scene)
+                # viewport = self.frames.viewport().rect()
+                # self.frames.render(pdf_painter, QRectF(pdf_printer.width()*0.25, pdf_printer.height()*0.1,
+                #        pdf_printer.width(), pdf_printer.height()/2. ),
+                # (self.frames.mapFromScene(QRectF(viewport)).boundingRect()))
+                scene.render(pdf_painter)
+                if i<len(self.frames.sceneCollection)-1:
+                    pdf_printer.newPage()
+            pdf_painter.end()
+
 
     def changeShortcuts(self):
         dialog = ActionDialog(self)
@@ -326,10 +324,10 @@ class Overview(QWidget):
 
         self.parent().parent().frames.resized.connect(lambda x:self.adaptFrameViewerSize(x))
 
-        
+
 
     def addFrameWidget(self,frameID = 0):
-        for i in reversed(range(self.vLayout.count())): 
+        for i in reversed(range(self.vLayout.count())):
             widget = self.vLayout.takeAt(i).widget()
             if widget is not None:
                 widget = widget.setParent(None)
@@ -343,7 +341,7 @@ class Overview(QWidget):
             label.clicked.connect(lambda x: self.labelClicked(x))
             self.vLayout.insertWidget(i,label)
         self.activeFrameChanged(self.parent().parent().frames.activeFrameID)
-    
+
     def removeFrameWidget(self, frameID = 0):
         try:
             widget = self.vLayout.takeAt(frameID).widget()
@@ -357,10 +355,10 @@ class Overview(QWidget):
             widget = self.vLayout.itemAt(i).widget()
             if widget is not None:
                 if widget.active:
-                    widget.toggleActive() 
+                    widget.toggleActive()
         activeFrame = self.vLayout.itemAt(activeFrameID)
         if activeFrame is not None:
-            activeFrame.widget().toggleActive()    
+            activeFrame.widget().toggleActive()
 
     def labelClicked(self,widget):
         self.parent().parent().frames.selectFrameById(self.vLayout.indexOf(widget))
@@ -384,7 +382,7 @@ class Notes(QWidget):
 
     def frameCreated(self, frameID):
         self.textCollection.insert(frameID,"")
-        
+
     def frameChanged(self,frameID):
         self.activeFrameID = frameID
         try:
@@ -399,7 +397,7 @@ class Notes(QWidget):
             self.textCollection.append("")
             self.textEdit.setHtml(content)
         except:
-            pass    
+            pass
 
     def frameDeleted(self,frameID):
         del self.textCollection[frameID]
