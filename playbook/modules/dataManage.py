@@ -206,7 +206,7 @@ class SettingWriter():
         actions.append(mainWindow.printPdfAction)
         actions.append(mainWindow.drawAction)
         actions.append(mainWindow.eraseAction)
-        actions.append(mainWindow.toogleGridAction)
+        actions.append(mainWindow.toggleGridAction)
 
         return actions
 

@@ -8,7 +8,7 @@ from PyQt5.QtCore import QCoreApplication,QRectF, QPointF, Qt, pyqtSignal, QObje
 
 
 from .ui import DancerDialog
-from .util import SlotManager
+from .util import SlotManager, Settings
 
 def changeWrapper(fn):
     @wraps(fn)
@@ -163,6 +163,7 @@ class FrameViewer(QGraphicsView):
     #Hier müssen alle Items der scene kopiert werden
     def copyScene(self,scene):
         copiedScene = Frame(self)
+        copiedScene.updateSettings(scene.settings)
         
         for item in scene.items():
             if isinstance(item,Dancer):
@@ -183,15 +184,17 @@ class FrameViewer(QGraphicsView):
 class Frame (QGraphicsScene):
     
     contentChanged = pyqtSignal()
-    def __init__(self,parent):
+    def __init__(self, parent, settings = Settings()):
         super().__init__(parent)
 
-        self.roomHeight = 600
-        self.roomWidth = 600
+        self._settings = settings
+        self.roomHeight = settings.get("roomHeight")
+        self.roomWidth = settings.get("roomWidth")
         self.setSceneRect(0,0,self.roomHeight,self.roomWidth)
-        self.gridSize = 30
+        self.gridSize = settings.get("gridSize")
 
-        self.grid = True
+        self.grid = settings.get("grid")
+        self.snap = settings.get("snap")
 
         self.drawing = False
         self.erase = False
@@ -221,7 +224,11 @@ class Frame (QGraphicsScene):
             self.scribbling = True
 
         elif event.button() == Qt.LeftButton and self.erase:
-            for item in self.items(event.scenePos()):
+            eps = 10
+            x = event.scenePos().x()
+            y = event.scenePos().y()
+            rect = QRectF(x-eps/2., y-eps/2., eps, eps);
+            for item in self.items(rect):
                 if isinstance(item,QGraphicsLineItem):
                     self.removeItem(item)
         else: 
@@ -241,10 +248,28 @@ class Frame (QGraphicsScene):
     ###########REIMPLEMENTATIONS###########################
 
     def updateSettings(self,settings):
+        self._settings = settings
         self.roomWidth = settings.get("roomWidth")
         self.roomHeight = settings.get("roomHeight")
         self.setSceneRect(0,0,self.roomHeight,self.roomWidth)
         self.gridSize = settings.get("gridSize")
+        self.snap = settings.get("snap")
+        self.grid = settings.get("grid")
+        self.update()
+    
+    @property
+    def settings(self):
+        return self._settings
+
+    @settings.setter
+    def settings(self, settings):
+        self._settings = settings
+        self.roomWidth = settings.get("roomWidth")
+        self.roomHeight = settings.get("roomHeight")
+        self.setSceneRect(0,0,self.roomHeight,self.roomWidth)
+        self.gridSize = settings.get("gridSize")
+        self.snap = settings.get("snap")
+        self.grid = settings.get("grid")
         self.update()
 
 class Dancer(QGraphicsObject):
@@ -297,7 +322,7 @@ class Dancer(QGraphicsObject):
         if ((change == QGraphicsItem.ItemPositionChange) and (self.scene()!=None)):
             newPos = value
 
-            if(QApplication.mouseButtons() == Qt.LeftButton and self.scene() != None and self.scene().grid):
+            if(QApplication.mouseButtons() == Qt.LeftButton and self.scene() != None and self.scene().snap):
                 gridSize = self.scene().gridSize
                 xV = round(newPos.x()/gridSize)*gridSize;
                 yV = round(newPos.y()/gridSize)*gridSize;
@@ -356,30 +381,31 @@ class TextBox(QGraphicsTextItem):
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.content = content
 
-    def mouseDoubleClickEvent(self,event):
+    def mouseDoubleClickEvent(self, event):
         if event.button() == Qt.LeftButton and self.textInteractionFlags() == Qt.NoTextInteraction:
             self.setTextInteractionFlags(Qt.TextEditorInteraction)
 
-    def focusOutEvent(self,event):
+    def focusOutEvent(self, event):
         self.setTextInteractionFlags(Qt.NoTextInteraction)
 
     def mouseReleaseEvent(self, event):
         self.ungrabMouse()
-        QGraphicsItem.mouseReleaseEvent(self,event)
+        QGraphicsItem.mouseReleaseEvent(self, event)
 
     @changeWrapper
     def mouseMoveEvent(self,event):
-        QGraphicsItem.mouseMoveEvent(self,event)
+        QGraphicsItem.mouseMoveEvent(self, event)
         self.scene().update()
 
 class SingleFrameViewer(QGraphicsView):
-    def __init__(self,parent,sourceFrameViewer = None):
+    def __init__(self, parent, sourceFrameViewer = None):
         super().__init__(parent)    
         
         self.sourceFrameViewer = sourceFrameViewer
 
     #Overwrite the default drawBackground to avoid calling drawBackground of the frame
-    def drawBackground(self,painter,rect):
+    def drawBackground(self, painter, rect):
         pass
+
 
 

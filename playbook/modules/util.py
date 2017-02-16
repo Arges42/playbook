@@ -16,9 +16,12 @@ class Settings(QObject):
         self.settings["dancerWidth"] = 30
         self.settings["roomHeight"] = 600
         self.settings["roomWidth"] = 600
+        self.settings["grid"] = True
+        self.settings["snap"] = True
 
     def setValue(self,key,value):
         self.settings[key] = value
+        self.settingsChanged.emit(self.settings)
 
     def getSettings(self):
         return self.settings
@@ -58,7 +61,10 @@ class SlotManager():
         SlotManager.reconnect(mainWindow.printPdfAction.triggered,mainWindow.printToPdf)
         SlotManager.reconnect(mainWindow.drawAction.triggered,mainWindow.frames.toggleDrawing)
         SlotManager.reconnect(mainWindow.eraseAction.triggered,mainWindow.frames.toggleErase)
-        SlotManager.reconnect(mainWindow.toogleGridAction.triggered,mainWindow.frames.toggleGrid)
+        #SlotManager.reconnect(mainWindow.toggleGridAction.triggered,mainWindow.frames.toggleGrid)
+        mainWindow.toggleSnapAction.triggered.connect(mainWindow.toggleSnap)
+        mainWindow.toggleGridAction.triggered.connect(mainWindow.toggleGrid)
+
         SlotManager.reconnect(mainWindow.openSettingsAction.triggered,mainWindow.changeSettings)
         SlotManager.reconnect(mainWindow.openShortcutAction.triggered,mainWindow.changeShortcuts)
         mainWindow.frames.contentChanged.connect(mainWindow.contentChanged)

@@ -23,7 +23,6 @@ from .core import FrameViewer, SingleFrameViewer
 from .dataManage import XmlFormat,SettingWriter
 from .ui import SettingsDialog,OverviewLabel,ActionDialog
 from .util import Settings,SlotManager
-# from .pdfGeneration import Xml2Pdf
 
 
 
@@ -156,13 +155,16 @@ class MainWindow(QMainWindow):
         self.printPdfAction = QAction('&Print',self)
         self.printPdfAction.setObjectName("print")
 
-        self.drawAction = QAction(QIcon(os.path.join(IMG_PATH,'pen.svg')),'Toogle drawing',self,checkable=True)
+        self.drawAction = QAction(QIcon(os.path.join(IMG_PATH,'pen.svg')),'toggle drawing',self,checkable=True)
         self.drawAction.setObjectName("draw")
-        self.eraseAction = QAction(QIcon(os.path.join(IMG_PATH,'eraser.svg')),'Toogle eraser',self,checkable=True)
+        self.eraseAction = QAction(QIcon(os.path.join(IMG_PATH,'eraser.svg')),'toggle eraser',self,checkable=True)
         self.eraseAction.setObjectName("erase")
-        self.toogleGridAction = QAction(QIcon(os.path.join(IMG_PATH,'grid.svg')),'Toggle grid',self,checkable=True)
-        self.toogleGridAction.setChecked(True)
-        self.toogleGridAction.setObjectName("toggleGrid")
+        self.toggleGridAction = QAction(QIcon(os.path.join(IMG_PATH,'grid.svg')),'Toggle grid',self,checkable=True)
+        self.toggleGridAction.setChecked(True)
+        self.toggleGridAction.setObjectName("toggleGrid")
+        self.toggleSnapAction = QAction(QIcon(os.path.join(IMG_PATH,'grid.svg')),'Toggle snap',self,checkable=True)
+        self.toggleSnapAction.setChecked(True)
+        self.toggleSnapAction.setObjectName("toggleSnap")
 
         self.openSettingsAction = QAction(QIcon(''),'Open settings',self)
         self.openShortcutAction = QAction(QIcon(''),'Modify shortcuts',self)
@@ -181,7 +183,8 @@ class MainWindow(QMainWindow):
         editMenu = menubar.addMenu('&Edit')
         editMenu.addAction(self.drawAction)
         editMenu.addAction(self.eraseAction)
-        editMenu.addAction(self.toogleGridAction)
+        editMenu.addAction(self.toggleGridAction)
+        editMenu.addAction(self.toggleSnapAction)
 
         settingsMenu = menubar.addMenu('&Settings')
         settingsMenu.addAction(self.openSettingsAction)
@@ -191,7 +194,8 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(self.exitAction)
         self.toolbar.addAction(self.drawAction)
         self.toolbar.addAction(self.eraseAction)
-        self.toolbar.addAction(self.toogleGridAction)
+        self.toolbar.addAction(self.toggleGridAction)
+        self.toolbar.addAction(self.toggleSnapAction)
 
         self.show()
 
@@ -241,22 +245,7 @@ class MainWindow(QMainWindow):
             self.overview.addFrameWidget()
 
     def printToPdf(self):
-        '''
-        if self.latex:
-            outname = os.path.join(QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation),self.projectName)
-            name = QFileDialog.getSaveFileName(self, 'Print to pdf',outname,'PDF (*.pdf)')[0]
-            if name:
-                name = os.path.splitext(name)[0]
-                doc = QDomDocument()
-                formatter = XmlFormat(doc)
-                doc.appendChild(formatter.projectToXml(self))
-                pdf = Xml2Pdf()
-                f = open("xml2pdf.tmp","w")
-                f.write(doc.toString())
-                f.close()
-                pdf.createPdf("xml2pdf.tmp",name)
-                os.remove("xml2pdf.tmp")
-        '''
+
         pdf_printer = QPrinter()
         pdf_printer.setOutputFormat(QPrinter.PdfFormat)
         pdf_printer.setPaperSize(self.frames.sceneRect().size(), QPrinter.Point)
@@ -300,6 +289,13 @@ class MainWindow(QMainWindow):
         self.projectName = settings.get("projectName")
         self.contentChanged()
 
+    def toggleSnap(self):
+        snap = self.settings.get("snap")
+        self.settings.setValue("snap", not snap)
+
+    def toggleGrid(self):
+        grid = self.settings.get("grid")
+        self.settings.setValue("grid", not grid)
 
 
 class Overview(QWidget):
